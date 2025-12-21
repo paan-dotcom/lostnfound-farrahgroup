@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lost & Found - Login</title>
+    <title>Lost & Found - Sign Up</title>
     <style>
         body {
             font-family: 'Arial', sans-serif;
@@ -121,18 +121,34 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="top-banner">Lost & Found</div>
-        <h1>Login</h1>
-        <p>Welcome back! Please log in to access your account.</p>
-        <form action="/login" method="POST">
-            <input type="text" name="username" placeholder="Username" required>
-            <input type="password" name="password" placeholder="Password" required>
-            <button type="submit">Login</button>
-        </form>
-        <a href="/create">Don't have an account? Sign up!</a>
-        <a href="{{ url_for('continue_without_login') }}" class="continue-login">Continue without Login</a>
+  <div class="container">
+
+    <div class="title-box">
+      <h2>Lost &</h2>
+      <h2>Found</h2>
     </div>
-    <div class="footer">By Nandan Reddy S</div> <!-- Your name placed at the bottom left -->
+
+    <h1>LOGIN</h1>
+    <p>Welcome back! Please log in to access your account.</p>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <p style="color:red; margin-top:10px;">{{ messages[0] }}</p>
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('login') }}">
+      <input type="text" name="username" placeholder="Username" required>
+      <input type="password" name="password" placeholder="Password" required>
+      <button type="submit">Login</button>
+    </form>
+
+    <a href="{{ url_for('create') }}">Don't have an account? Sign up!</a>
+    <a href="{{ url_for('continue_without_login') }}" class="continue-login">Continue without Login</a>
+
+  </div>
+
+  <div class="footer">By Farrah, Chris, Amirah & Alya</div>
 </body>
+
 </html>

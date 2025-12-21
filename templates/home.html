@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Farrah Lost & Found - Home</title>
+  <style>
+    body { font-family: Arial; background:#f1f5f9; margin:0; }
+    .top { background:#0284c7; color:white; padding:18px 22px; }
+    .wrap { max-width:900px; margin:25px auto; padding:0 18px; }
+    .box { background:white; padding:18px; border-radius:14px; margin-bottom:14px; }
+    a.btn { display:inline-block; padding:10px 14px; border-radius:10px; background:#0284c7; color:white; text-decoration:none; }
+  </style>
+</head>
+<body>
+  <div class="top">
+    <b>Farrah Lost & Found</b> — Welcome, {{ user.username }}
+    <span style="float:right;"><a class="btn" href="{{ url_for('logout') }}">Logout</a></span>
+  </div>
+
+  <div class="wrap">
+    <div class="box">
+      <h2>My Website</h2>
+      <p>This is my custom homepage (not the original repo UI).</p>
+      <p>You can add features later: report item, view items, contact, etc.</p>
+    </div>
+  </div>
+</body>
+</html>

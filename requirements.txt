@@ -1,0 +1,7 @@
+Flask
+Flask-Login
+mysql-connector-python
+Werkzeug
+Pillow
+python-dotenv
+Flask-SQLAlchemy

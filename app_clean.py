@@ -53,6 +53,20 @@ def index():
         return redirect(url_for("home"))
     return redirect(url_for("login"))
 
+
+
+@app.route("/report", methods=["GET", "POST"])
+@login_required
+def report():
+    if request.method == "POST":
+        flash("Report submitted! (DB save coming next)")
+        return redirect(url_for("report"))  # back to same page
+
+    return render_template("report.html")
+
+
+
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Report Item</title>
+  <style>
+    body { font-family: Arial; background:#f3f4f6; margin:0; }
+    .topbar { background:#0284c7; color:white; padding:14px 20px; display:flex; justify-content:space-between; align-items:center; }
+    .card { width:520px; margin:28px auto; background:white; padding:22px; border-radius:18px; }
+    input, select, textarea { width:100%; padding:12px; margin:10px 0; border-radius:12px; border:1px solid #ddd; }
+    button { width:100%; padding:12px; border:none; border-radius:12px; background:#0284c7; color:white; font-size:16px; font-weight:bold; }
+    a { color:white; text-decoration:none; font-weight:bold; }
+    .msg { color: green; font-weight: bold; margin: 10px 0; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div><b>Lost & Found System</b></div>
+    <div><a href="{{ url_for('home') }}">Home</a></div>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0;">Report Lost / Found Item</h2>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="msg">{{ messages[0] }}</div>
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST">
+      <label>Type</label>
+      <select name="type" required>
+        <option value="lost">Lost</option>
+        <option value="found">Found</option>
+      </select>
+
+      <label>Item Title</label>
+      <input name="title" placeholder="e.g., Student ID Card" required />
+
+      <label>Category</label>
+      <select name="category" required>
+        <option>Student ID / Matric Card</option>
+        <option>Wallet / Purse</option>
+        <option>Phone / Tablet</option>
+        <option>Laptop / Charger</option>
+        <option>Keys</option>
+        <option>Earbuds / Headphones</option>
+        <option>Bag / Backpack</option>
+        <option>Books / Notes</option>
+        <option>Other</option>
+      </select>
+
+      <label>Location (UNiKL)</label>
+      <select name="location" required>
+        <option>Main Entrance / Guardhouse</option>
+        <option>Administration Office</option>
+        <option>Library</option>
+        <option>Cafeteria / Food Court</option>
+        <option>Surau</option>
+        <option>Lecture Hall / Classroom Block</option>
+        <option>Lab Block / Computer Labs</option>
+        <option>Parking Area</option>
+        <option>Other</option>
+      </select>
+
+      <label>Description</label>
+      <textarea name="description" rows="4" placeholder="Color, brand, special marks..." required></textarea>
+
+      <label>Contact (WhatsApp / Email)</label>
+      <input name="contact" placeholder="e.g., 012-xxx xxxx / email" required />
+
+      <button type="submit">Submit Report</button>
+    </form>
+  </div>
+</body>
+</html>

@@ -1,26 +1,317 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Farrah Lost & Found - Home</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lost & Found Dashboard</title>
   <style>
-    body { font-family: Arial; background:#f1f5f9; margin:0; }
-    .top { background:#0284c7; color:white; padding:18px 22px; }
-    .wrap { max-width:900px; margin:25px auto; padding:0 18px; }
-    .box { background:white; padding:18px; border-radius:14px; margin-bottom:14px; }
-    a.btn { display:inline-block; padding:10px 14px; border-radius:10px; background:#0284c7; color:white; text-decoration:none; }
+    :root {
+      --bg: #f3f4f6;
+      --primary: #0284c7;
+      --primary-dark: #0369a1;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e5e7eb;
+      --lost: #ef4444;
+      --found: #22c55e;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    /* Top bar */
+    .topbar {
+      background: var(--primary);
+      color: white;
+      padding: 14px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .topbar .title {
+      font-weight: bold;
+      letter-spacing: 0.3px;
+    }
+    .topbar a {
+      color: white;
+      text-decoration: none;
+      font-weight: bold;
+      background: rgba(255,255,255,0.15);
+      padding: 8px 12px;
+      border-radius: 10px;
+    }
+
+    /* Layout */
+    .container {
+      max-width: 1100px;
+      margin: 24px auto;
+      padding: 0 16px;
+    }
+
+    .hero {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 22px;
+      margin-bottom: 18px;
+    }
+    .hero h1 { margin: 0 0 8px; }
+    .hero p { margin: 0; color: var(--muted); }
+
+    .grid {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: 1.2fr 0.8fr;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px;
+    }
+
+    /* Stats */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 14px;
+    }
+    .stat {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px;
+    }
+    .stat .num { font-size: 22px; font-weight: bold; }
+    .stat .label { color: var(--muted); font-size: 13px; }
+
+    /* Buttons */
+    .actions {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-top: 14px;
+      max-width: 520px;
+    }
+    .btn {
+      display: inline-block;
+      text-align: center;
+      padding: 12px;
+      border-radius: 14px;
+      border: 0;
+      text-decoration: none;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-outline {
+      background: white;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn-outline:hover { background: #f8fafc; }
+
+    /* Search */
+    .filters {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    input, select {
+      width: 100%;
+      padding: 11px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      outline: none;
+    }
+
+    /* Recent list */
+    .items {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .item {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: 12px;
+      background: #fff;
+    }
+    .item h3 { margin: 0 0 4px; font-size: 16px; }
+    .item .meta { color: var(--muted); font-size: 13px; }
+    .badge {
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      color: white;
+      font-weight: bold;
+      white-space: nowrap;
+    }
+    .badge-lost { background: var(--lost); }
+    .badge-found { background: var(--found); }
+
+    /* Footer */
+    .footer {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+      padding: 10px 0 30px;
+    }
+
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: 1fr; }
+      .actions { grid-template-columns: 1fr; max-width: 100%; }
+      .filters { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
+
 <body>
-  <div class="top">
-    <b>Farrah Lost & Found</b> — Welcome, {{ user.username }}
-    <span style="float:right;"><a class="btn" href="{{ url_for('logout') }}">Logout</a></span>
+  <div class="topbar">
+    <div class="title">Lost & Found System</div>
+    <a href="{{ url_for('logout') }}">Logout</a>
   </div>
 
-  <div class="wrap">
-    <div class="box">
-      <h2>My Website</h2>
-      <p>This is my custom homepage (not the original repo UI).</p>
-      <p>You can add features later: report item, view items, contact, etc.</p>
+  <div class="container">
+    <div class="hero">
+      <h1>Welcome to the Lost & Found Dashboard</h1>
+      <p>Report missing items, track found belongings, and help reunite items with their owners.</p>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="num">{{ total_items if total_items is defined else "—" }}</div>
+          <div class="label">Total Reports</div>
+        </div>
+        <div class="stat">
+          <div class="num">{{ total_lost if total_lost is defined else "—" }}</div>
+          <div class="label">Lost Items</div>
+        </div>
+        <div class="stat">
+          <div class="num">{{ total_found if total_found is defined else "—" }}</div>
+          <div class="label">Found Items</div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <a class="btn btn-primary" href="{{ url_for('create') }}">+ Report an Item</a>
+        <a class="btn btn-outline" href="{{ url_for('home') }}">Refresh</a>
+        {# If you later add a view_items route, you can bring this back:
+           <a class="btn btn-outline" href="{{ url_for('view_items') }}">View Items</a>
+        #}
+      </div>
+    </div>
+
+    <div class="grid">
+      <!-- Left: Recent items -->
+      <div class="card">
+        <h2 style="margin:0 0 6px;">Latest Reports</h2>
+        <div style="color:var(--muted); font-size:13px;">Most recent lost/found submissions.</div>
+
+        {% if items is defined and items %}
+          <div class="items">
+            {% for item in items[:8] %}
+              <div class="item">
+                <div>
+                  <h3>{{ item.title if item.title is defined else item[0] }}</h3>
+                  <div class="meta">
+                    Location: {{ item.location if item.location is defined else "—" }} •
+                    Date: {{ item.created_at if item.created_at is defined else "—" }}
+                  </div>
+                </div>
+
+                {% set st = (item.status if item.status is defined else "")|lower %}
+                {% if st == "lost" %}
+                  <span class="badge badge-lost">LOST</span>
+                {% elif st == "found" %}
+                  <span class="badge badge-found">FOUND</span>
+                {% else %}
+                  <span class="badge" style="background:#94a3b8;">STATUS</span>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="items">
+            <div class="item">
+              <div>
+                <h3>Black Wallet</h3>
+                <div class="meta">Location: Cafeteria • Date: 2025-12-22</div>
+              </div>
+              <span class="badge badge-lost">LOST</span>
+            </div>
+
+            <div class="item">
+              <div>
+                <h3>iPhone (Blue Case)</h3>
+                <div class="meta">Location: Library • Date: 2025-12-22</div>
+              </div>
+              <span class="badge badge-found">FOUND</span>
+            </div>
+
+            <div class="item">
+              <div>
+                <h3>House Keys (Keychain)</h3>
+                <div class="meta">Location: Parking Area • Date: 2025-12-21</div>
+              </div>
+              <span class="badge badge-lost">LOST</span>
+            </div>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Right: Search & filters (STATIC for now so it won't crash) -->
+      <div class="card">
+        <h2 style="margin:0 0 6px;">Search & Filter</h2>
+        <div style="color:var(--muted); font-size:13px;">(Not wired yet) — UI only for now.</div>
+
+        <form>
+          <div class="filters">
+            <input name="search" placeholder="Search keyword..." />
+            <select name="status">
+              <option value="all">All Status</option>
+              <option value="lost">Lost</option>
+              <option value="found">Found</option>
+            </select>
+            <select name="category">
+              <option value="all">All Categories</option>
+              <option value="phone">Phone</option>
+              <option value="wallet">Wallet</option>
+              <option value="keys">Keys</option>
+              <option value="bag">Bag</option>
+              <option value="others">Others</option>
+            </select>
+          </div>
+
+          <div style="margin-top:12px;">
+            <button class="btn btn-primary" type="button" style="width:100%;">Search</button>
+          </div>
+        </form>
+
+        <div style="margin-top:14px; font-size:13px; color:var(--muted);">
+          Tip: Report items with clear location + contact info so others can return it faster.
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      Lost & Found System • Help items return to their owners
     </div>
   </div>
 </body>

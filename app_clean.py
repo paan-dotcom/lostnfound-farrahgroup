@@ -15,6 +15,17 @@ app.secret_key = "secret-key"
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///lostnfound_clean.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
+class Item(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    type = db.Column(db.String(10), nullable=False)   # "lost" or "found"
+    title = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    location = db.Column(db.String(100))
+    contact_info = db.Column(db.String(100))
+    image_path = db.Column(db.String(255))
+    owner_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    created_at = db.Column(db.DateTime)
+
 
 # Login manager
 login_manager = LoginManager()

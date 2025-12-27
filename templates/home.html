@@ -25,7 +25,6 @@
       color: var(--text);
     }
 
-    /* Top bar */
     .topbar {
       background: var(--primary);
       color: white;
@@ -34,10 +33,7 @@
       justify-content: space-between;
       align-items: center;
     }
-    .topbar .title {
-      font-weight: bold;
-      letter-spacing: 0.3px;
-    }
+    .topbar .title { font-weight: bold; letter-spacing: 0.3px; }
     .topbar a {
       color: white;
       text-decoration: none;
@@ -47,7 +43,6 @@
       border-radius: 10px;
     }
 
-    /* Layout */
     .container {
       max-width: 1100px;
       margin: 24px auto;
@@ -77,7 +72,6 @@
       padding: 18px;
     }
 
-    /* Stats */
     .stats {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -93,7 +87,6 @@
     .stat .num { font-size: 22px; font-weight: bold; }
     .stat .label { color: var(--muted); font-size: 13px; }
 
-    /* Buttons */
     .actions {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -118,12 +111,10 @@
       border: 1px solid var(--border);
       color: var(--text);
     }
-    .btn-outline:hover { background: #f8fafc; }
 
-    /* Search */
     .filters {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-columns: 1fr;
       gap: 10px;
       margin-top: 12px;
     }
@@ -133,9 +124,9 @@
       border: 1px solid var(--border);
       border-radius: 12px;
       outline: none;
+      margin-bottom: 5px;
     }
 
-    /* Recent list */
     .items {
       display: grid;
       grid-template-columns: 1fr;
@@ -160,12 +151,10 @@
       font-size: 12px;
       color: white;
       font-weight: bold;
-      white-space: nowrap;
     }
     .badge-lost { background: var(--lost); }
     .badge-found { background: var(--found); }
 
-    /* Footer */
     .footer {
       margin-top: 18px;
       color: var(--muted);
@@ -176,9 +165,6 @@
 
     @media (max-width: 900px) {
       .grid { grid-template-columns: 1fr; }
-      .stats { grid-template-columns: 1fr; }
-      .actions { grid-template-columns: 1fr; max-width: 100%; }
-      .filters { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -196,15 +182,15 @@
 
       <div class="stats">
         <div class="stat">
-          <div class="num">{{ total_items if total_items is defined else "—" }}</div>
+          <div class="num">{{ total_items if total_items is defined else "0" }}</div>
           <div class="label">Total Reports</div>
         </div>
         <div class="stat">
-          <div class="num">{{ total_lost if total_lost is defined else "—" }}</div>
+          <div class="num">{{ total_lost if total_lost is defined else "0" }}</div>
           <div class="label">Lost Items</div>
         </div>
         <div class="stat">
-          <div class="num">{{ total_found if total_found is defined else "—" }}</div>
+          <div class="num">{{ total_found if total_found is defined else "0" }}</div>
           <div class="label">Found Items</div>
         </div>
       </div>
@@ -212,95 +198,79 @@
       <div class="actions">
         <a class="btn btn-primary" href="{{ url_for('report') }}">+ Report an Item</a>
         <a class="btn btn-outline" href="{{ url_for('home') }}">Refresh</a>
-        {# If you later add a view_items route, you can bring this back:
-           <a class="btn btn-outline" href="{{ url_for('view_items') }}">View Items</a>
-        #}
       </div>
     </div>
 
     <div class="grid">
-      <!-- Left: Recent items -->
       <div class="card">
         <h2 style="margin:0 0 6px;">Latest Reports</h2>
         <div style="color:var(--muted); font-size:13px;">Most recent lost/found submissions.</div>
 
         {% if items is defined and items %}
           <div class="items">
-            {% for item in items[:8] %}
+            {% for item in items %}
               <div class="item">
                 <div>
-                  <h3>{{ item.title if item.title is defined else item[0] }}</h3>
+                  <h3>{{ item.title }}</h3>
                   <div class="meta">
-                    Location: {{ item.location if item.location is defined else "—" }} •
-                    Date: {{ item.created_at if item.created_at is defined else "—" }}
+                    <b>Location:</b> {{ item.location }} • 
+                    <b>Category:</b> {{ item.category }} <br>
+                    <b>Posted:</b> {{ item.created_at.strftime("%Y-%m-%d") if item.created_at else "Today" }}
+                  </div>
+                  <div class="meta" style="margin-top: 6px;">
+                    <i>"{{ item.description }}"</i>
                   </div>
                 </div>
 
-                {% set st = (item.status if item.status is defined else "")|lower %}
-                {% if st == "lost" %}
+                {% if item.type|lower == "lost" %}
                   <span class="badge badge-lost">LOST</span>
-                {% elif st == "found" %}
+                {% elif item.type|lower == "found" %}
                   <span class="badge badge-found">FOUND</span>
                 {% else %}
-                  <span class="badge" style="background:#94a3b8;">STATUS</span>
+                  <span class="badge" style="background:#94a3b8;">{{ item.type|upper }}</span>
                 {% endif %}
               </div>
             {% endfor %}
           </div>
         {% else %}
           <div class="items">
-            <div class="item">
-              <div>
-                <h3>Black Wallet</h3>
-                <div class="meta">Location: Cafeteria • Date: 2025-12-22</div>
-              </div>
-              <span class="badge badge-lost">LOST</span>
-            </div>
-
-            <div class="item">
-              <div>
-                <h3>iPhone (Blue Case)</h3>
-                <div class="meta">Location: Library • Date: 2025-12-22</div>
-              </div>
-              <span class="badge badge-found">FOUND</span>
-            </div>
-
-            <div class="item">
-              <div>
-                <h3>House Keys (Keychain)</h3>
-                <div class="meta">Location: Parking Area • Date: 2025-12-21</div>
-              </div>
-              <span class="badge badge-lost">LOST</span>
+            <div style="padding: 20px; text-align: center; color: var(--muted);">
+              No reports found. Be the first to report something!
             </div>
           </div>
         {% endif %}
       </div>
 
-      <!-- Right: Search & filters (STATIC for now so it won't crash) -->
       <div class="card">
         <h2 style="margin:0 0 6px;">Search & Filter</h2>
-        <div style="color:var(--muted); font-size:13px;">(Not wired yet) — UI only for now.</div>
+        <div style="color:var(--muted); font-size:13px;">Find items faster.</div>
 
-        <form>
+        <form action="{{ url_for('home') }}" method="GET">
           <div class="filters">
-            <input name="search" placeholder="Search keyword..." />
+            <input name="search" placeholder="Search keyword..." value="{{ request.args.get('search', '') }}" />
+            
             <select name="status">
-              <option value="all">All Status</option>
-              <option value="lost">Lost</option>
-              <option value="found">Found</option>
+              <option value="all" {% if request.args.get('status') == 'all' %}selected{% endif %}>All Status</option>
+              <option value="lost" {% if request.args.get('status') == 'lost' %}selected{% endif %}>Lost</option>
+              <option value="found" {% if request.args.get('status') == 'found' %}selected{% endif %}>Found</option>
             </select>
+
             <select name="category">
               <option value="all">All Categories</option>
-              <option value="phone">Phone</option>
-              <option value="wallet">Wallet</option>
-              <option value="keys">Keys</option>
-              <option value="bag">Bag</option>
-              <option value="others">Others</option>
+              <option value="Student ID / Matric Card" {% if request.args.get('category') == 'Student ID / Matric Card' %}selected{% endif %}>Student ID / Matric Card</option>
+              <option value="Wallet / Purse" {% if request.args.get('category') == 'Wallet / Purse' %}selected{% endif %}>Wallet / Purse</option>
+              <option value="Phone / Tablet" {% if request.args.get('category') == 'Phone / Tablet' %}selected{% endif %}>Phone / Tablet</option>
+              <option value="Laptop / Charger" {% if request.args.get('category') == 'Laptop / Charger' %}selected{% endif %}>Laptop / Charger</option>
+              <option value="Keys" {% if request.args.get('category') == 'Keys' %}selected{% endif %}>Keys</option>
+              <option value="Earbuds / Headphones" {% if request.args.get('category') == 'Earbuds / Headphones' %}selected{% endif %}>Earbuds / Headphones</option>
+              <option value="Bag / Backpack" {% if request.args.get('category') == 'Bag / Backpack' %}selected{% endif %}>Bag / Backpack</option>
+              <option value="Books / Notes" {% if request.args.get('category') == 'Books / Notes' %}selected{% endif %}>Books / Notes</option>
+              <option value="Other" {% if request.args.get('category') == 'Other' %}selected{% endif %}>Other</option>
             </select>
           </div>
 
           <div style="margin-top:12px;">
-            <button class="btn btn-primary" type="button" style="width:100%;">Search</button>
+            <button class="btn btn-primary" type="submit" style="width:100%;">Search</button>
           </div>
         </form>
 

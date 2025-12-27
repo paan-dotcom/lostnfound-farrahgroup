@@ -1,3 +1,5 @@
+from datetime import datetime # Fixes the NameError you had
+from datetime import datetime
 from flask import Flask, render_template, redirect, url_for, request, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import (
@@ -15,17 +17,18 @@ app.secret_key = "secret-key"
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///lostnfound_clean.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
+
 class Item(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     type = db.Column(db.String(10), nullable=False)   # "lost" or "found"
     title = db.Column(db.String(100), nullable=False)
+    category = db.Column(db.String(50))               # Form data needs this
     description = db.Column(db.Text, nullable=False)
-    location = db.Column(db.String(100))
-    contact_info = db.Column(db.String(100))
+    location = db.Column(db.String(100))              # Form data needs this
+    contact_info = db.Column(db.String(100))          # Form data needs this
     image_path = db.Column(db.String(255))
     owner_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
-    created_at = db.Column(db.DateTime)
-
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 # Login manager
 login_manager = LoginManager()
@@ -59,8 +62,22 @@ def index():
 @login_required
 def report():
     if request.method == "POST":
-        flash("Report submitted! (DB save coming next)")
-        return redirect(url_for("report"))  # back to same page
+        new_item = Item(
+            type=request.form["type"],
+            title=request.form["title"],
+            category=request.form["category"],
+            location=request.form["location"],
+            description=request.form["description"],
+            contact_info=request.form["contact"],
+            owner_id=current_user.id
+        )
+
+        db.session.add(new_item)
+        db.session.commit()
+
+        flash("Report submitted successfully!")
+        # THIS LINE is the key. Make sure it matches your main page function name.
+        return redirect(url_for("home")) 
 
     return render_template("report.html")
 
@@ -116,7 +133,39 @@ def create():
 @app.route("/home")
 @login_required
 def home():
-    return render_template("home.html", user=current_user)
+    # 1. Start with all items
+    query = Item.query
+
+    # 2. Get the filter values from the URL
+    search_txt = request.args.get("search", "")
+    status_val = request.args.get("status", "all")
+    cat_val = request.args.get("category", "all")
+
+    # 3. Apply filters if they aren't "all" or empty
+    if search_txt:
+        # Searches title OR description
+        query = query.filter(Item.title.contains(search_txt) | Item.description.contains(search_txt))
+    
+    if status_val != "all":
+        query = query.filter(Item.type == status_val)
+
+    if cat_val != "all":
+        query = query.filter(Item.category == cat_val)
+
+    # 4. Get the results
+    items = query.order_by(Item.id.desc()).all()
+    
+    # Stats for the top cards (Always show total count)
+    total_items = Item.query.count()
+    total_lost = Item.query.filter_by(type="lost").count()
+    total_found = Item.query.filter_by(type="found").count()
+
+    return render_template("home.html", 
+                           user=current_user, 
+                           items=items,
+                           total_items=total_items,
+                           total_lost=total_lost,
+                           total_found=total_found)
 
 @app.route("/logout")
 @login_required

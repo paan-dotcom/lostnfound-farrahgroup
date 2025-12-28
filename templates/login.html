@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Farrah Lost & Found - Login</title>
+  <style>
+    body { font-family: Arial, sans-serif; background:#0ea5e9; margin:0; }
+    .card { width:380px; margin:80px auto; background:white; padding:30px; border-radius:18px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+    h1 { margin:0 0 10px; font-size: 24px; color: #0f172a; }
+    p { color: #64748b; margin-bottom: 20px; }
+    
+    /* Input Styling */
+    input { width:100%; padding:12px; margin:10px 0; border-radius:10px; border:1px solid #ddd; box-sizing: border-box; outline: none; }
+    input:focus { border-color: #0284c7; ring: 2px solid #bae6fd; }
+    
+    /* Button Styling */
+    button { width:100%; padding:12px; border:none; border-radius:10px; background:#0284c7; color:white; font-size:16px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+    button:hover { background:#0369a1; }
+    
+    /* Links and Footer */
+    a { display:block; text-align:center; margin-top:15px; color:#0284c7; text-decoration:none; font-size: 14px; }
+    a:hover { text-decoration: underline; }
+    .footer { position:fixed; bottom:10px; left:10px; color: white; font-size: 12px; background: rgba(0,0,0,0.2); padding: 5px 10px; border-radius: 5px; }
+    
+    /* Error Message */
+    .error-msg { background: #fee2e2; color: #b91c1c; padding: 10px; border-radius: 8px; font-size: 13px; margin-bottom: 15px; border: 1px solid #fecaca; }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h1>Farrah Lost & Found</h1>
+    <p>Login to continue</p>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="error-msg">
+          {{ messages[0] }}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('login') }}">
+      <input type="text" name="username" placeholder="Username" required autocomplete="username">
+      
+      <input type="password" name="password" placeholder="Password" required autocomplete="current-password">
+      
+      <button type="submit">Login</button>
+    </form>
+
+    <a href="{{ url_for('create') }}">Don't have an account? Create one</a>
+  </div>
+
+  <div class="footer">By Farrah, Chris, Amirah & Alya</div>
+
+</body>
+</html>

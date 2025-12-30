@@ -20,6 +20,9 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(150), nullable=False)
     items = db.relationship('Item', backref='owner', lazy=True)
+   
+    is_admin = db.Column(db.Boolean, default=False) 
+    items = db.relationship('Item', backref='owner', lazy=True)
 
 class Item(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -32,11 +35,46 @@ class Item(db.Model):
     owner_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+class AuditLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    action = db.Column(db.String(255), nullable=False) # e.g., "User Login", "Report Created"
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    ip_address = db.Column(db.String(50))
+
+    # This helps link the log to a username
+    user = db.relationship('User', backref='logs')
+
+def log_event(action):
+    user_id = current_user.id if current_user.is_authenticated else None
+    new_log = AuditLog(
+        user_id=user_id,
+        action=action,
+        ip_address=request.remote_addr
+    )
+    db.session.add(new_log)
+    db.session.commit()
+
+
+
+def log_event(action):
+    user_id = current_user.id if current_user.is_authenticated else None
+    new_log = AuditLog(
+        user_id=user_id,
+        action=action,
+        ip_address=request.remote_addr
+    )
+    db.session.add(new_log)
+    db.session.commit()
+
+
+    # ROUTES
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# ROUTES
+
 @app.route("/")
 @app.route("/login", methods=['GET', 'POST'])
 def login():
@@ -44,6 +82,9 @@ def login():
         user = User.query.filter_by(username=request.form['username']).first()
         if user and check_password_hash(user.password, request.form['password']):
             login_user(user)
+            
+            log_event(f"User {user.username} logged in successfully")
+            log_event(f"User {user.username} logged in successfully")
             return redirect(url_for('home'))
         flash('Login failed. Check username and password.', 'danger')
     return render_template('login.html')
@@ -56,6 +97,7 @@ def create():
         try:
             db.session.add(new_user)
             db.session.commit()
+            log_event(f"New account created: {username}")
             flash('Account created! Please login.', 'success')
             return redirect(url_for('login'))
         except:
@@ -102,9 +144,21 @@ def report():
         )
         db.session.add(new_item)
         db.session.commit()
+        log_event(f"New {new_item.type} report submitted: {new_item.title}")
         flash('Report submitted!', 'success')
         return redirect(url_for('home'))
     return render_template('report.html')
+
+@app.route("/admin/logs")
+@login_required
+def view_logs():
+    # Only allow entry if the user is an admin
+    if not current_user.is_admin:
+        flash("Access Denied: Admins Only!")
+        return redirect(url_for('home'))
+        
+    all_logs = AuditLog.query.order_by(AuditLog.timestamp.desc()).all()
+    return render_template("admin_logs.html", logs=all_logs)
 
 @app.route("/logout")
 def logout():
@@ -113,8 +167,17 @@ def logout():
 
 if __name__ == "__main__":
     with app.app_context():
-        # This line ensures the folder and database are created automatically
         if not os.path.exists('instance'):
             os.makedirs('instance')
         db.create_all()
+        
+        # Check if an admin already exists, if not, create one!
+        admin_user = User.query.filter_by(username='admin').first()
+        if not admin_user:
+            hashed_pw = generate_password_hash('admin123', method='pbkdf2:sha256')
+            new_admin = User(username='admin', password=hashed_pw, is_admin=True)
+            db.session.add(new_admin)
+            db.session.commit()
+            print("Admin account created: User: admin | Pass: admin123")
+            
     app.run(debug=True)

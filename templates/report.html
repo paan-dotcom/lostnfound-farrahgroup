@@ -1,76 +1,105 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Report Item</title>
+  <meta charset="UTF-8">
+  <title>Report Item - UniKL Lost & Found</title>
   <style>
-    body { font-family: Arial; background:#f3f4f6; margin:0; }
-    .topbar { background:#0284c7; color:white; padding:14px 20px; display:flex; justify-content:space-between; align-items:center; }
-    .card { width:520px; margin:28px auto; background:white; padding:22px; border-radius:18px; }
-    input, select, textarea { width:100%; padding:12px; margin:10px 0; border-radius:12px; border:1px solid #ddd; }
-    button { width:100%; padding:12px; border:none; border-radius:12px; background:#0284c7; color:white; font-size:16px; font-weight:bold; }
-    a { color:white; text-decoration:none; font-weight:bold; }
-    .msg { color: green; font-weight: bold; margin: 10px 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background:#0ea5e9; margin:0; padding-bottom: 50px; }
+    
+    /* Top Navigation Bar */
+    .topbar { background:#0f172a; color:white; padding:15px 40px; display:flex; justify-content:space-between; align-items:center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    .topbar b { font-size: 18px; letter-spacing: 0.5px; }
+    .nav-link { color:white; text-decoration:none; font-weight:600; font-size: 14px; padding: 8px 16px; border-radius: 8px; transition: background 0.2s; }
+    .nav-link:hover { background: rgba(255,255,255,0.1); }
+
+    /* Form Card */
+    .card { width:550px; margin:40px auto; background:white; padding:40px; border-radius:24px; box-shadow: 0 15px 35px rgba(0,0,0,0.2); }
+    h2 { margin:0 0 10px; color: #0f172a; font-size: 26px; }
+    .subtitle { color: #64748b; font-size: 14px; margin-bottom: 25px; }
+    
+    /* Form Elements */
+    label { display: block; margin-top: 18px; font-weight: 600; color: #475569; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
+    input, select, textarea { width:100%; padding:12px; margin-top: 6px; border-radius:12px; border:1.5px solid #e2e8f0; box-sizing: border-box; font-size: 14px; transition: all 0.2s; }
+    input:focus, select:focus, textarea:focus { border-color: #0284c7; outline: none; box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.1); }
+    
+    /* Button */
+    button { width:100%; padding:15px; border:none; border-radius:12px; background:#0284c7; color:white; font-size:16px; font-weight:bold; cursor: pointer; margin-top: 30px; transition: background 0.2s, transform 0.1s; }
+    button:hover { background:#0369a1; }
+    button:active { transform: scale(0.98); }
+    
+    /* Flash Messages */
+    .msg { background: #dcfce7; color: #166534; padding: 12px; border-radius: 10px; font-size: 14px; margin-bottom: 20px; border: 1px solid #bbf7d0; text-align: center; }
+    
+    /* Security Footer inside Card */
+    .security-note { margin-top: 25px; font-size: 11px; color: #94a3b8; text-align: center; border-top: 1px solid #f1f5f9; padding-top: 15px; display: flex; align-items: center; justify-content: center; gap: 5px; }
   </style>
 </head>
 <body>
+
   <div class="topbar">
-    <div><b>Lost & Found System</b></div>
-    <div><a href="{{ url_for('home') }}">Home</a></div>
+    <div><b>UniKL Lost & Found</b></div>
+    <div><a href="{{ url_for('home') }}" class="nav-link">← Back to Dashboard</a></div>
   </div>
 
   <div class="card">
-    <h2 style="margin-top:0;">Report Lost / Found Item</h2>
+    <h2>Submit a Report</h2>
+    <div class="subtitle">Enter the details of the lost or found item below.</div>
 
     {% with messages = get_flashed_messages() %}
       {% if messages %}
-        <div class="msg">{{ messages[0] }}</div>
+        <div class="msg">✔ {{ messages[0] }}</div>
       {% endif %}
     {% endwith %}
 
     <form method="POST">
-      <label>Type</label>
+      <label>Report Type</label>
       <select name="type" required>
-        <option value="lost">Lost</option>
-        <option value="found">Found</option>
+        <option value="lost">I Lost Something</option>
+        <option value="found">I Found Something</option>
       </select>
 
-      <label>Item Title</label>
-      <input name="title" placeholder="e.g., Student ID Card" required />
+      <label>Item Name</label>
+      <input name="title" placeholder="e.g., Black Herschel Backpack" required />
 
       <label>Category</label>
       <select name="category" required>
-        <option>Student ID / Matric Card</option>
-        <option>Wallet / Purse</option>
-        <option>Phone / Tablet</option>
-        <option>Laptop / Charger</option>
-        <option>Keys</option>
-        <option>Earbuds / Headphones</option>
-        <option>Bag / Backpack</option>
-        <option>Books / Notes</option>
-        <option>Other</option>
+        <option value="Student ID">Student ID / Matric Card</option>
+        <option value="Wallet">Wallet / Purse</option>
+        <option value="Phone">Phone / Tablet</option>
+        <option value="Laptop">Laptop / Charger</option>
+        <option value="Keys">Keys</option>
+        <option value="Earbuds">Earbuds / Headphones</option>
+        <option value="Bag">Bag / Backpack</option>
+        <option value="Books">Books / Notes</option>
+        <option value="Other">Other</option>
       </select>
 
-      <label>Location (UNiKL)</label>
+      <label>Location within Campus</label>
       <select name="location" required>
-        <option>Main Entrance / Guardhouse</option>
-        <option>Administration Office</option>
-        <option>Library</option>
-        <option>Cafeteria / Food Court</option>
-        <option>Surau</option>
-        <option>Lecture Hall / Classroom Block</option>
-        <option>Lab Block / Computer Labs</option>
-        <option>Parking Area</option>
-        <option>Other</option>
+        <option value="Guardhouse">Main Entrance / Guardhouse</option>
+        <option value="Admin">Administration Office</option>
+        <option value="Library">Library</option>
+        <option value="Cafeteria">Cafeteria / Food Court</option>
+        <option value="Surau">Surau</option>
+        <option value="Lecture Hall">Lecture Hall / Classrooms</option>
+        <option value="Labs">Lab Block / Computer Labs</option>
+        <option value="Parking">Parking Area</option>
+        <option value="Other">Other Location</option>
       </select>
 
-      <label>Description</label>
-      <textarea name="description" rows="4" placeholder="Color, brand, special marks..." required></textarea>
+      <label>Detailed Description</label>
+      <textarea name="description" rows="3" placeholder="Specify color, brand, or any unique marks..." required></textarea>
 
-      <label>Contact (WhatsApp / Email)</label>
-      <input name="contact" placeholder="e.g., 012-xxx xxxx / email" required />
+      <label>Contact Information</label>
+      <input name="contact" placeholder="Your WhatsApp number or Student Email" required />
 
-      <button type="submit">Submit Report</button>
+      <button type="submit">Submit Official Report</button>
+
+      <div class="security-note">
+        🔒 <span>Encrypted session active. Activity is recorded in the Audit Log (A09).</span>
+      </div>
     </form>
   </div>
+
 </body>
 </html>

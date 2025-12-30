@@ -4,23 +4,31 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
+from dotenv import load_dotenv
 
+# 1. Load the variables from your .env file
+load_dotenv()
+
+# 2. Create the Flask app instance
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-secret-key-123'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///lostnfound_clean.db'
+
+# 3. Configure the app
+# Change these lines to use a simpler path
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY') or 'your-secret-key-123'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///lostnfound_clean.db' # Use this simple path
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# 4. Initialize the extensions
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-# DATABASE MODELS
+# --- DATABASE MODELS ---
+
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(150), nullable=False)
-    items = db.relationship('Item', backref='owner', lazy=True)
-   
     is_admin = db.Column(db.Boolean, default=False) 
     items = db.relationship('Item', backref='owner', lazy=True)
 
@@ -36,44 +44,31 @@ class Item(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class AuditLog(db.Model):
+    __table_args__ = {'extend_existing': True}
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    action = db.Column(db.String(255), nullable=False) # e.g., "User Login", "Report Created"
+    action = db.Column(db.String(255), nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     ip_address = db.Column(db.String(50))
-
-    # This helps link the log to a username
     user = db.relationship('User', backref='logs')
 
+# --- HELPER FUNCTIONS ---
+
 def log_event(action):
-    user_id = current_user.id if current_user.is_authenticated else None
+    u_id = current_user.id if current_user.is_authenticated else None
     new_log = AuditLog(
-        user_id=user_id,
+        user_id=u_id,
         action=action,
         ip_address=request.remote_addr
     )
     db.session.add(new_log)
     db.session.commit()
 
-
-
-def log_event(action):
-    user_id = current_user.id if current_user.is_authenticated else None
-    new_log = AuditLog(
-        user_id=user_id,
-        action=action,
-        ip_address=request.remote_addr
-    )
-    db.session.add(new_log)
-    db.session.commit()
-
-
-    # ROUTES
+# --- ROUTES ---
 
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
-
 
 @app.route("/")
 @app.route("/login", methods=['GET', 'POST'])
@@ -82,8 +77,6 @@ def login():
         user = User.query.filter_by(username=request.form['username']).first()
         if user and check_password_hash(user.password, request.form['password']):
             login_user(user)
-            
-            log_event(f"User {user.username} logged in successfully")
             log_event(f"User {user.username} logged in successfully")
             return redirect(url_for('home'))
         flash('Login failed. Check username and password.', 'danger')
@@ -92,78 +85,94 @@ def login():
 @app.route("/create", methods=['GET', 'POST'])
 def create():
     if request.method == 'POST':
+        username = request.form['username']
         hashed_pw = generate_password_hash(request.form['password'], method='pbkdf2:sha256')
-        new_user = User(username=request.form['username'], password=hashed_pw)
+        new_user = User(username=username, password=hashed_pw)
         try:
             db.session.add(new_user)
             db.session.commit()
             log_event(f"New account created: {username}")
             flash('Account created! Please login.', 'success')
             return redirect(url_for('login'))
-        except:
-            flash('Username already exists.', 'danger')
+        except Exception as e:
+            db.session.rollback()
+            flash('Username already exists or error occurred.', 'danger')
     return render_template('create.html')
 
 @app.route("/home")
 @login_required
 def home():
+    search_txt = request.args.get('q', '').strip()
+    status_val = request.args.get('status', '').lower()
+    cat_val = request.args.get('category', '')
+
     query = Item.query
-    search_txt = request.args.get('search', '').strip()
-    status_val = request.args.get('status', 'all')
-    cat_val = request.args.get('category', 'all')
 
     if search_txt:
         query = query.filter(Item.title.ilike(f"%{search_txt}%") | Item.description.ilike(f"%{search_txt}%"))
-    if status_val != 'all':
-        query = query.filter(Item.type == status_val)
-    if cat_val != 'all':
-        query = query.filter(Item.category == cat_val)
+    
+    if status_val and status_val != 'all':
+        query = query.filter(Item.type.ilike(f"%{status_val}%"))
+        
+    if cat_val and cat_val != 'all':
+        query = query.filter(Item.category.ilike(f"%{cat_val.split(' / ')[0]}%"))
 
     items = query.order_by(Item.id.desc()).all()
     
-    # Stats
-    total_items = Item.query.count()
-    total_lost = Item.query.filter_by(type='lost').count()
-    total_found = Item.query.filter_by(type='found').count()
+    total_items_count = Item.query.count()
+    lost_count = Item.query.filter_by(type='lost').count()
+    found_count = Item.query.filter_by(type='found').count()
 
-    return render_template('home.html', user=current_user, items=items, 
-                           total_items=total_items, total_lost=total_lost, total_found=total_found)
+    return render_template('home.html', 
+                           items=items, 
+                           total=total_items_count, 
+                           lost=lost_count, 
+                           found=found_count)
 
 @app.route("/report", methods=['GET', 'POST'])
-@login_required
+@login_required 
 def report():
     if request.method == 'POST':
         new_item = Item(
             type=request.form['type'],
             title=request.form['title'],
             category=request.form['category'],
-            location=request.form['location'],
             description=request.form['description'],
+            location=request.form['location'],
             contact_info=request.form['contact'],
             owner_id=current_user.id
         )
         db.session.add(new_item)
         db.session.commit()
-        log_event(f"New {new_item.type} report submitted: {new_item.title}")
-        flash('Report submitted!', 'success')
+        log_event(f"Item Reported: {new_item.title} ({new_item.type}) by {current_user.username}")
+        flash('Report submitted successfully!')
         return redirect(url_for('home'))
     return render_template('report.html')
 
 @app.route("/admin/logs")
 @login_required
 def view_logs():
-    # Only allow entry if the user is an admin
     if not current_user.is_admin:
         flash("Access Denied: Admins Only!")
         return redirect(url_for('home'))
-        
     all_logs = AuditLog.query.order_by(AuditLog.timestamp.desc()).all()
     return render_template("admin_logs.html", logs=all_logs)
 
 @app.route("/logout")
 def logout():
+    log_event(f"User {current_user.username} logged out")
     logout_user()
     return redirect(url_for('login'))
+
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('404.html'), 404
+
+@app.errorhandler(403)
+def access_denied(e):
+    return render_template('403.html'), 403
+
+# --- MAIN BLOCK ---
 
 if __name__ == "__main__":
     with app.app_context():
@@ -171,7 +180,6 @@ if __name__ == "__main__":
             os.makedirs('instance')
         db.create_all()
         
-        # Check if an admin already exists, if not, create one!
         admin_user = User.query.filter_by(username='admin').first()
         if not admin_user:
             hashed_pw = generate_password_hash('admin123', method='pbkdf2:sha256')

@@ -14,4 +14,7 @@ A secure web application for UniKL students to report and track lost/found items
 3. Run: `python app_clean.py`
 
 ## 4. Dependencies
-- Flask, Flask-SQLAlchemy, Flask-Login, Python-Dotenv
+- Framework: Flask
+- Database/ORML Flask-SQLAlchemy
+- Authentication: Flask-Login
+- Environment: Python-Dotenv

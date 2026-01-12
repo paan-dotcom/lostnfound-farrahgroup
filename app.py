@@ -420,3 +420,7 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=True)
+
+from it_admin import it_admin_bp
+
+app.register_blueprint(it_admin_bp)

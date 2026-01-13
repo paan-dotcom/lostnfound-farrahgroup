@@ -37,6 +37,11 @@ class User(db.Model, UserMixin):
     password = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(20), default="user")
 
+    def set_password(self, password):
+        self.password = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password, password)
 
 class Item(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -85,16 +90,14 @@ def login():
         username = request.form['username']
         password = request.form['password']
 
-        user = User.query.filter_by(username=username, password=password).first()
-        if user:
+        user = User.query.filter_by(username=username).first()
+        
+         if user and user.check_password(password):
             login_user(user)
             return redirect(url_for('dashboard'))
 
         flash('Invalid credentials!')
     return render_template('login.html')
-
-
-
 
 @app.route('/continue_without_login', methods=['GET'])
 def continue_without_login():
@@ -415,12 +418,22 @@ def get_user_info():
             }
     return None
 
+from it_admin import it_admin_bp
+app.register_blueprint(it_admin_bp)
+
+with app.app_context():
+    db.create_all()
+
+    it_admin = User.query.filter_by(username="itadmin").first()
+    if not it_admin:
+        it_admin = User(username="itadmin", role="it_admin")
+        it_admin.set_password("StrongPass123")
+        db.session.add(it_admin)
+        db.session.commit()
+        print("IT Admin created")
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
     app.run(debug=True)
 
-from it_admin import it_admin_bp
 
-app.register_blueprint(it_admin_bp)
+

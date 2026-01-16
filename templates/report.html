@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Report Item - UniKL Lost & Found</title>
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; background:#0ea5e9; margin:0; padding-bottom: 50px; }
+    .topbar { background:#0f172a; color:white; padding:15px 40px; display:flex; justify-content:space-between; align-items:center; }
+    .nav-link { color:white; text-decoration:none; font-weight:600; }
+    .card { width:550px; margin:40px auto; background:white; padding:40px; border-radius:24px; }
+    label { display:block; margin-top:18px; font-weight:600; }
+    input, select, textarea { width:100%; padding:12px; margin-top:6px; }
+    button { width:100%; padding:15px; margin-top:30px; }
+    .msg { background:#dcfce7; padding:12px; margin-bottom:20px; text-align:center; }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <b>UniKL Lost & Found</b>
+  <a href="{{ url_for('dashboard') }}" class="nav-link">← Back</a>
+</div>
+
+<div class="card">
+  <h2>Submit a Report</h2>
+
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}
+      <div class="msg">{{ messages[0] }}</div>
+    {% endif %}
+  {% endwith %}
+
+  <!-- ✅ FORM STARTS HERE -->
+  <form method="POST" enctype="multipart/form-data">
+
+    <label>Report Type</label>
+    <select name="type" required>
+      <option value="lost">I Lost Something</option>
+      <option value="found">I Found Something</option>
+    </select>
+
+    <label>Item Name</label>
+    <input name="title" required>
+
+    <label>Category</label>
+    <select name="category" required>
+      <option value="Student ID">Student ID</option>
+      <option value="Wallet">Wallet</option>
+      <option value="Phone">Phone</option>
+      <option value="Laptop">Laptop</option>
+      <option value="Other">Other</option>
+    </select>
+
+    <label>Location</label>
+    <select name="location" required>
+      <option value="Library">Library</option>
+      <option value="Cafeteria">Cafeteria</option>
+      <option value="Lecture Hall">Lecture Hall</option>
+      <option value="Other">Other</option>
+    </select>
+
+    <label>Description</label>
+    <textarea name="description" rows="3" required></textarea>
+
+    <label>Reference Image (optional)</label>
+    <input type="file" name="image" accept=".jpg,.jpeg,.png">
+
+    <label>Contact Information</label>
+    <!-- ✅ FIXED NAME -->
+    <input name="contact_info" required>
+
+    <button type="submit">Submit Report</button>
+
+  </form>
+  <!-- ✅ FORM ENDS HERE -->
+
+</div>
+</body>
+</html>

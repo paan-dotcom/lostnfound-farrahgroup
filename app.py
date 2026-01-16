@@ -1,41 +1,40 @@
+from flask import Flask, render_template, redirect, url_for, request, flash
 from flask_sqlalchemy import SQLAlchemy
-from flask import Flask, render_template, redirect, url_for, request, flash, session, jsonify, current_app, make_response
-from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
-from flask_login import current_user
+from flask_login import (
+    LoginManager, UserMixin, login_user,
+    login_required, logout_user, current_user
+)
+from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import timedelta
-import os
-from werkzeug.utils import secure_filename
-from PIL import Image, ImageOps
-import os
-from werkzeug.utils import secure_filename
-from io import BytesIO
-from datetime import datetime, timedelta
-import logging
-logging.basicConfig(level=logging.DEBUG)
+import re
 
-# Set a maximum image size and quality level for compression
-MAX_IMAGE_SIZE = (800, 600)  # Max dimensions (width, height)
-QUALITY = 85  # Image quality (0-100)
-
-#'LostNFound.mysql.pythonanywhere-services.com', database='LostNFound$default', user='LostNFound', password='"*********"'
-
-sql_host = "**.***.(ythonanywhere-services.com"
-sql_user = "LostNFound"
-sql_password = "*********"
-sql_database = "LostNFound$default"
-
+# --------------------------------------------------
+# App setup
+# --------------------------------------------------
 app = Flask(__name__)
-from flask_sqlalchemy import SQLAlchemy
+app.secret_key = "super_secret_key"
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///lostnfound.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["REMEMBER_COOKIE_DURATION"] = timedelta(days=7)
 
 db = SQLAlchemy(app)
+
+login_manager = LoginManager(app)
+login_manager.login_view = "login"
+
+# --------------------------------------------------
+# Models
+# --------------------------------------------------
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(20), default="user")
+    failed_attempts = db.Column(db.Integer, default=0)
+    blocked = db.Column(db.Boolean, default=False)
+    # Relationship to items
+    items = db.relationship('Item', backref='author', lazy=True)
 
     def set_password(self, password):
         self.password = generate_password_hash(password)
@@ -45,395 +44,248 @@ class User(db.Model, UserMixin):
 
 class Item(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    type = db.Column(db.String(10), nullable=False)  # lost or found
     title = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text, nullable=False)
-    image = db.Column(db.String(255))
-    owner_id = db.Column(db.Integer, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    status = db.Column(db.String(20), default="lost") # 'lost' or 'found'
+    priority = db.Column(db.Integer, default=1)      # 1=Low, 2=Med, 3=High
+    image_file = db.Column(db.String(100), default='default.jpg')
+    location = db.Column(db.String(100))
+    contact = db.Column(db.String(100))
+    date_posted = db.Column(db.DateTime, default=db.func.current_timestamp())
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
-
-app.secret_key = 'your_secret_key'
-UPLOAD_FOLDER = '/home/LostNFound/mysite/static/images'  
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg','webp'}
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = 'login'
-app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=7)
-
-
-
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
+# --------------------------------------------------
+# Login loader
+# --------------------------------------------------
 @login_manager.user_loader
 def load_user(user_id):
-        return User.query.get(int(user_id))
+    return User.query.get(int(user_id))
 
-    
+# --------------------------------------------------
+# Password policy
+# --------------------------------------------------
+def is_strong_password(password):
+    return (
+        len(password) >= 8 and
+        re.search(r"[A-Z]", password) and
+        re.search(r"[a-z]", password) and
+        re.search(r"[0-9]", password) and
+        re.search(r"[!@#$%^&*()_+=\-]", password)
+    )
+
+# --------------------------------------------------
 # Routes
-@app.route('/')
+# --------------------------------------------------
+@app.route("/")
 def index():
-    if current_user.is_authenticated:
-        return redirect(url_for('dashboard'))
-    return redirect(url_for('login'))
+    return redirect(url_for("login"))
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+        username = request.form["username"]
+        password = request.form["password"]
+
+        if User.query.filter_by(username=username).first():
+            flash("Username already exists")
+            return redirect(url_for("register"))
+
+        if not is_strong_password(password):
+            flash("Password must be strong (8 chars, upper, lower, number, symbol)")
+            return redirect(url_for("register"))
+
+        user = User(username=username, role="user")
+        user.set_password(password)
+        db.session.add(user)
+        db.session.commit()
+
+        flash("Registration successful. Please login.")
+        return redirect(url_for("login"))
+
+    return render_template("register.html")
+
+@app.route("/login", methods=["GET", "POST"])
 def login():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
+    if request.method == "POST":
+        username = request.form["username"]
+        password = request.form["password"]
 
         user = User.query.filter_by(username=username).first()
-        
-         if user and user.check_password(password):
+
+        if not user:
+            flash("Invalid username or password")
+            return redirect(url_for("login"))
+
+        if user.blocked:
+            flash("Account blocked after 3 failed attempts")
+            return redirect(url_for("login"))
+
+        if user.check_password(password):
+            user.failed_attempts = 0
+            db.session.commit()
             login_user(user)
-            return redirect(url_for('dashboard'))
+            
+            # ROLE-BASED REDIRECT
+            if user.role == "it_admin":
+                return redirect(url_for("it_dashboard"))
+            elif user.role == "admin":
+                return redirect(url_for("admin_dashboard"))
+            else:
+                return redirect(url_for("dashboard"))
+        else:
+            user.failed_attempts += 1
+            if user.failed_attempts >= 3:
+                user.blocked = True
+            db.session.commit()
+            flash("Invalid username or password")
 
-        flash('Invalid credentials!')
-    return render_template('login.html')
+    return render_template("login.html")
 
-@app.route('/continue_without_login', methods=['GET'])
-def continue_without_login():
-    user = User.query.filter_by(username='temp').first()
-    if user:
-        login_user(user)
-        return redirect(url_for('dashboard'))
+# ---------- DASHBOARDS ----------
 
-    flash('Temporary user does not exist!')
-    return redirect(url_for('login'))
-
-def get_items_from_db():
-    return Item.query.order_by(Item.created_at.desc()).all()
-
-def get_items_from_db_prior():
-    return Item.query.order_by(Item.priority.desc()).all()
-
-
-def is_admin(user_id):
-    user = User.query.get(int(user_id))
-    return user is not None and user.role == 'admin'
-
-
-@app.route('/dashboard')
+@app.route("/dashboard")
 @login_required
 def dashboard():
-    items = get_items_from_db()
-    items_prior = get_items_from_db_prior()
-    total_lost = 0
-    total_found = 0
-    total_items = len(items)
-    admin_status = is_admin(current_user.id)
+    # Pull data from database for the HTML
+    items = Item.query.order_by(Item.date_posted.desc()).all()
+    total_items = Item.query.count()
+    total_lost = Item.query.filter_by(status='lost').count()
+    total_found = Item.query.filter_by(status='found').count()
+    recent_items = Item.query.order_by(Item.date_posted.desc()).limit(5).all()
 
-    for i, item in enumerate(items):
-        try:
-            priority = int(item[5])
-        except ValueError:
-            priority = 0
+    return render_template("dashboard.html", 
+                           items=items, 
+                           total_items=total_items, 
+                           total_lost=total_lost, 
+                           total_found=total_found, 
+                           recent_items=recent_items)
 
-        items[i] = list(item) 
-        items[i][5] = priority
+@app.route("/it-dashboard")
+@login_required
+def it_dashboard():
+    if current_user.role != "it_admin":
+        flash("Unauthorized access!")
+        return redirect(url_for("dashboard"))
+    return render_template("it_dashboard.html")
 
-
-        if item[4] == 'lost':
-            total_lost += 1
-        elif item[4] == 'found':
-            total_found += 1
-    for i, item in enumerate(items_prior):
-        try:
-            priority = int(item[5])
-        except ValueError:
-            priority = 0
-
-        items_prior[i] = list(item)  
-        items_prior[i][5] = priority
-
-
-    recent_items = items_prior[:10]
-
-    return render_template('dashboard.html',
-                           user=get_user_info(),
-                           items=items,
-                           total_items=total_items,
-                           total_lost=total_lost,
-                           total_found=total_found,
-                           recent_items=recent_items,
-                           admin_status=admin_status)
-
-@app.route('/admin_dashboard')
+@app.route("/admin-dashboard")
+@login_required
 def admin_dashboard():
-    items = Item.query.order_by(Item.created_at.desc()).all()
-    return render_template('admin_dashboard.html', items=items)
+    if current_user.role != "admin":
+        flash("Unauthorized access!")
+        return redirect(url_for("dashboard"))
+    return render_template("admin_dashboard.html")
 
-@app.route('/view_items')
-def view_items():
-    items = Item.query.order_by(Item.created_at.desc()).all()
+# ---------- PROFILE & LOGOUT ----------
 
-    items_list = []
-
-    for item in items:
-        formatted_item = f'item name: *{item.title}*\n'
-        formatted_item += f'desc: {item.description}\n'
-        formatted_item += f'status: *{item.status}*\n'
-        formatted_item += f'location: {item.location}\n'
-        formatted_item += f'contact: {item.contact_info}\n'
-        formatted_item += '------' * 10 + '\n'
-        items_list.append(formatted_item)
-
-    items_list.append("View all at website: http://127.0.0.1:5000/login")
-
-    formatted_data = ''.join(items_list)
-
-    return render_template('view_items.html', items=formatted_data)
-
-@app.route('/modify_item/<int:item_id>', methods=['GET', 'POST'])
-def modify_item(item_id):
-    item = Item.query.get_or_404(item_id)
-
-    if request.method == 'POST':
-        item.title = request.form['name']
-        item.description = request.form['description']
-        item.priority = request.form['priority']
-        item.category = request.form['category']
-        item.status = request.form['status']
-        item.location = request.form['location']
-        item.contact_info = request.form['contact_info']
-
-        image_file = request.files.get('image_path')
-        if image_file and image_file.filename:
-            image_filename = secure_filename(image_file.filename)
-            upload_path = os.path.join('static/uploads', image_filename)
-            image_file.save(upload_path)
-            item.image = upload_path
-
-        db.session.commit()
-
-        flash("Item updated successfully!", "success")
-        return redirect(url_for('dashboard'))
-
-    return render_template('modify_item.html', item=item)
-
-
-@app.route('/delete_item/<int:item_id>', methods=['POST'])
-def delete_item(item_id):
-    item = Item.query.get_or_404(item_id)
-
-    if item.image:
-        image_path = os.path.join(item.image)
-        if os.path.exists(image_path):
-            os.remove(image_path)
-
-    db.session.delete(item)
-    db.session.commit()
-
-    return redirect(url_for('admin_dashboard'))
-
-
-@app.route('/fetch_items', methods=['GET'])
-@login_required
-def fetch_items():
-    search = request.args.get('search', '').lower()
-    category = request.args.get('category', 'all')
-    status = request.args.get('status', 'all')
-    sort_by = request.args.get('sort', 'priority')
-
-    query = Item.query
-
-    if category != 'all':
-        query = query.filter(Item.category == category)
-
-    if status != 'all':
-        query = query.filter(Item.status == status)
-
-    if search:
-        query = query.filter(
-            (Item.title.ilike(f"%{search}%")) |
-            (Item.description.ilike(f"%{search}%"))
-        )
-
-    if sort_by == 'priority':
-        query = query.order_by(Item.priority.desc())
-    else:
-        query = query.order_by(Item.created_at.desc())
-
-    items = query.all()
-
-    return jsonify([
-        {
-            "id": item.id,
-            "title": item.title,
-            "description": item.description,
-            "category": item.category,
-            "status": item.status,
-            "priority": item.priority,
-            "location": item.location,
-            "contact_info": item.contact_info,
-            "image": item.image
-        }
-        for item in items
-    ])
-
-@app.route('/report', methods=['GET', 'POST'])
-@login_required
-def report():
-    # block temp user
-    if current_user.username == 'temp':
-        return render_template('create.html', temp_user=True)
-
-    if request.method == 'POST':
-        item = Item(
-            priority=request.form['priority'],
-            title=request.form['name'],
-            description=request.form['description'],
-            category=request.form['category'],
-            status=request.form['status'],
-            location=request.form['location'],
-            contact_info=request.form['contact_info'],
-            owner_id=current_user.id
-        )
-
-        file = request.files.get('image')
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            upload_folder = os.path.join('static', 'images')
-            os.makedirs(upload_folder, exist_ok=True)
-            image_path = os.path.join(upload_folder, filename)
-            file.save(image_path)
-            item.image = image_path
-
-        db.session.add(item)
-        db.session.commit()
-
-        flash("Report successfully submitted!", "success")
-        return redirect(url_for('dashboard'))
-
-    return render_template('return.html')
-
-@app.route('/show_locations')
-@login_required
-def show_locations():
-    items = Item.query.all()
-
-    lost_items = []
-    for item in items:
-        if item.latitude is not None and item.longitude is not None:
-            lost_items.append([
-                item.title,
-                item.status,
-                float(item.latitude),
-                float(item.longitude),
-                item.contact_info,
-                item.image
-            ])
-
-    return render_template('show_locations.html', lost_items=lost_items)
-
-@app.route('/create', methods=['GET', 'POST'])
-def create():
-    cookie_limit = request.cookies.get('rate_limit')
-
-    if request.method == 'POST':
-        if cookie_limit:
-            last_request_time = datetime.strptime(cookie_limit, '%Y-%m-%d %H:%M:%S')
-            if datetime.now() - last_request_time < timedelta(seconds=60):
-                flash('You are being rate-limited. Please wait a minute before trying again.')
-                return redirect(url_for('create'))
-
-        username = request.form['username']
-        password = request.form['password']
-        confirm_password = request.form['confirm_password']
-
-        if password != confirm_password:
-            flash("Passwords don't match. Please try again.")
-            return redirect(url_for('create'))
-
-        # ✅ SQLite/SQLAlchemy check instead of MySQL cursor
-        existing_user = User.query.filter_by(username=username).first()
-        if existing_user:
-            flash("Username already exists. Please choose another one.")
-            return redirect(url_for('create'))
-
-        # ✅ SQLite/SQLAlchemy insert instead of MySQL INSERT
-        new_user = User(username=username, password=password, role='user')
-        db.session.add(new_user)
-        db.session.commit()
-
-        flash("Account created successfully! You can now log in.")
-
-        response = make_response(redirect(url_for('login')))
-        response.set_cookie(
-            'rate_limit',
-            datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            max_age=60  # 60 seconds
-        )
-        logging.debug("Setting rate-limit cookie.")
-        return response
-
-    return render_template('create.html')
-
-
-
-@app.route('/profile', methods=['GET', 'POST'])
+@app.route("/profile", methods=["GET", "POST"])
 @login_required
 def profile():
-    user = current_user
+    if request.method == "POST":
+        flash("Report submitted successfully!")
+        return redirect(url_for("profile"))
+    return render_template("profile.html")
 
-    posts = Item.query.filter_by(owner_id=user.id).all()
-
-    if request.method == 'POST':
-        post_id = request.form.get('post_id')
-        if post_id:
-            post = Item.query.filter_by(id=post_id, owner_id=user.id).first()
-            if post:
-                if post.image and os.path.exists(post.image):
-                    os.remove(post.image)
-
-                db.session.delete(post)
-                db.session.commit()
-
-                flash('Post deleted successfully', 'success')
-                return redirect(url_for('profile'))
-
-    return render_template('profile.html', user=user, posts=posts)
-@app.route('/logout')
+@app.route("/logout")
 @login_required
 def logout():
     logout_user()
-    return redirect(url_for('login'))
+    return redirect(url_for("login"))
 
-def get_user_info():
-    if current_user.is_authenticated:
-        user = User.query.get(current_user.id)
-        if user:
-            return {
-                "id": user.id,
-                "username": user.username,
-                "role": user.role
-            }
-    return None
+@app.route("/report")
+@login_required
+def report():
+    return "<h1>Report Page</h1><p>This page is under construction.</p><a href='/dashboard'>Back</a>"
 
-from it_admin import it_admin_bp
-app.register_blueprint(it_admin_bp)
+@app.route("/locations")
+@login_required
+def show_locations():
+    return "<h1>Locations Page</h1><p>This page is under construction.</p><a href='/dashboard'>Back</a>"
 
+# --------------------------------------------------
+# Database init
+# --------------------------------------------------
 with app.app_context():
     db.create_all()
 
-    it_admin = User.query.filter_by(username="itadmin").first()
-    if not it_admin:
+    # Create default Admin
+    if not User.query.filter_by(username="admin").first():
+        admin = User(username="admin", role="admin")
+        admin.set_password("Admin@123!")
+        db.session.add(admin)
+
+    # Create default IT Admin
+    if not User.query.filter_by(username="itadmin").first():
         it_admin = User(username="itadmin", role="it_admin")
-        it_admin.set_password("StrongPass123")
+        it_admin.set_password("StrongPass123!")
         db.session.add(it_admin)
-        db.session.commit()
-        print("IT Admin created")
 
-if __name__ == '__main__':
+    db.session.commit()
+
+# ---------- IT ADMIN TOOLS ----------
+
+@app.route("/it-admin/logs")
+@login_required
+def view_logs():
+    if current_user.role != "it_admin":
+        return redirect(url_for("dashboard"))
+    # In a real app, you'd read a log file here
+    logs = ["User 'admin' logged in", "Database backed up", "New item reported"]
+    return render_template("it_logs.html", logs=logs)
+
+@app.route("/it-admin/backup")
+@login_required
+def backup_db():
+    if current_user.role != "it_admin":
+        return redirect(url_for("dashboard"))
+    # Logic for backup would go here
+    flash("Database backup initiated successfully!")
+    return redirect(url_for("it_dashboard"))
+
+@app.route("/it-admin/permissions")
+@login_required
+def manage_permissions():
+    if current_user.role != "it_admin":
+        return redirect(url_for("dashboard"))
+    users = User.query.all()
+    return render_template("it_permissions.html", users=users)
+
+# 1. Update the existing admin_dashboard route to fetch reports
+@app.route("/admin-dashboard")
+@login_required
+def admin_dashboard():
+    if current_user.role != "admin":
+        flash("Unauthorized access!")
+        return redirect(url_for("dashboard"))
+    # Fetch all items to display in the admin table
+    items = Item.query.all()
+    return render_template("admin_dashboard.html", items=items)
+
+# 2. Route to Mark a Report as Solved
+@app.route("/admin/update/<int:item_id>", methods=["POST"])
+@login_required
+def update_report(item_id):
+    if current_user.role != "admin":
+        return redirect(url_for("dashboard"))
+    
+    item = Item.query.get_or_404(item_id)
+    item.priority = 0  # We use 0 to represent 'Solved' in this logic
+    db.session.commit()
+    flash(f"Report '{item.title}' marked as solved.")
+    return redirect(url_for("admin_dashboard"))
+
+# 3. Route to Delete a Report
+@app.route("/admin/delete/<int:item_id>", methods=["POST"])
+@login_required
+def delete_report(item_id):
+    if current_user.role != "admin":
+        return redirect(url_for("dashboard"))
+    
+    item = Item.query.get_or_404(item_id)
+    db.session.delete(item)
+    db.session.commit()
+    flash("Report deleted successfully.")
+    return redirect(url_for("admin_dashboard"))
+
+if __name__ == "__main__":
     app.run(debug=True)
-
-
-

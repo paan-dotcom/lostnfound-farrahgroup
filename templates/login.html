@@ -4,34 +4,63 @@
   <meta charset="UTF-8">
   <title>UniKL Lost & Found - Secure Login</title>
   <style>
-    body { font-family: 'Segoe UI', Arial, sans-serif; background:#0ea5e9; margin:0; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-    .card { width:400px; background:white; padding:40px; border-radius:24px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); text-align: center; }
-    
-    /* Title Styling */
-    h1 { margin:0 0 5px; font-size: 28px; color: #0f172a; letter-spacing: -0.5px; }
-    .subtitle { color: #64748b; margin-bottom: 25px; font-size: 15px; }
-    
-    /* Input Styling */
-    input { width:100%; padding:14px; margin:12px 0; border-radius:12px; border:1.5px solid #e2e8f0; box-sizing: border-box; outline: none; transition: all 0.2s; font-size: 15px; }
-    input:focus { border-color: #0284c7; box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.1); }
-    
-    /* Button Styling */
-    button { width:100%; padding:14px; border:none; border-radius:12px; background:#0284c7; color:white; font-size:16px; font-weight: 600; cursor: pointer; transition: transform 0.1s, background 0.2s; margin-top: 10px; }
-    button:hover { background:#0369a1; }
-    button:active { transform: scale(0.98); }
-    
-    /* Links and Navigation */
-    .create-link { display:block; text-align:center; margin-top:20px; color:#0284c7; text-decoration:none; font-size: 14px; font-weight: 500; }
-    .create-link:hover { text-decoration: underline; }
-    
-    /* Security Badge */
-    .security-badge { margin-top: 25px; font-size: 11px; color: #94a3b8; display: flex; align-items: center; justify-content: center; gap: 5px; border-top: 1px solid #f1f5f9; padding-top: 15px; }
-
-    /* Footer */
-    .footer { position:fixed; bottom:15px; left:20px; color: white; font-size: 12px; opacity: 0.8; font-weight: 500; }
-    
-    /* Error Message */
-    .error-msg { background: #fee2e2; color: #b91c1c; padding: 12px; border-radius: 10px; font-size: 13px; margin-bottom: 20px; border: 1px solid #fecaca; text-align: left; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background:#0ea5e9;
+      margin:0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .card {
+      width:400px;
+      background:white;
+      padding:40px;
+      border-radius:24px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+      text-align: center;
+    }
+    h1 {
+      margin:0 0 5px;
+      font-size: 28px;
+      color: #0f172a;
+    }
+    .subtitle {
+      color: #64748b;
+      margin-bottom: 25px;
+      font-size: 15px;
+    }
+    input {
+      width:100%;
+      padding:14px;
+      margin:12px 0;
+      border-radius:12px;
+      border:1.5px solid #e2e8f0;
+      font-size: 15px;
+    }
+    button {
+      width:100%;
+      padding:14px;
+      border:none;
+      border-radius:12px;
+      background:#0284c7;
+      color:white;
+      font-size:16px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .error-msg {
+      background: #fee2e2;
+      color: #b91c1c;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      margin-bottom: 20px;
+      border: 1px solid #fecaca;
+      text-align: left;
+    }
   </style>
 </head>
 <body>
@@ -49,19 +78,11 @@
     {% endwith %}
 
     <form method="POST" action="{{ url_for('login') }}">
-      <input type="text" name="username" placeholder="Username" required autocomplete="username">
-      <input type="password" name="password" placeholder="Password" required autocomplete="current-password">
-      <button type="submit">Log In to System</button>
+      <input type="text" name="username" placeholder="Username" required>
+      <input type="password" name="password" placeholder="Password" required>
+      <button type="submit">Log In</button>
     </form>
-
-    <a href="{{ url_for('create') }}" class="create-link">New student? Register here</a>
-
-    <div class="security-badge">
-       🔒 <span>Secured with OWASP A07 Cryptographic Hashing</span>
-    </div>
   </div>
-
-  <div class="footer">Project by Farrah, Chris, Amirah & Alya</div>
 
 </body>
 </html>

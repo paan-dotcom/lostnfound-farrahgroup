@@ -76,7 +76,7 @@
     <div class="title">UniKL Lost & Found</div>
     <div class="nav-group">
       {% if current_user.is_admin %}
-        <a href="{{ url_for('view_logs') }}" style="background: rgba(239, 68, 68, 0.2); color: #fca5a5;">🛡️ Admin Logs</a>
+        <a href="{{ url_for('it_admin.logs') }}" style="background: rgba(239, 68, 68, 0.2); color: #fca5a5;">🛡️ Admin Logs</a>
       {% endif %}
       <a href="{{ url_for('logout') }}" class="btn-logout">Logout</a>
     </div>
@@ -176,7 +176,7 @@
             </select>
 
             <button class="btn btn-primary" type="submit" style="width:100%; margin-top: 10px;">Apply Filters</button>
-            <a href="{{ url_for('home') }}" class="btn btn-outline" style="width:100%; display: block; margin-top: 8px;">Clear All</a>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-outline" style="width:100%; display: block; margin-top: 8px;">Clear All</a>
           </div>
         </form>
       </div>

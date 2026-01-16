@@ -57,17 +57,10 @@
             text-decoration: none;
         }
 
-        #sidebar a.btn-primary {
-            background: #004080;
-        }
+        #sidebar a.btn-primary { background: #004080; }
+        #sidebar a.btn-success { background: #28a745; }
 
-        #sidebar a.btn-success {
-            background: #28a745;
-        }
-
-        #content {
-            flex: 3 1 600px;
-        }
+        #content { flex: 3 1 600px; }
 
         .item-card {
             background: white;
@@ -92,36 +85,17 @@
         }
 
         .item-card img.fallback {
-            background: url('https://via.placeholder.com/350x200.png?text=Image+Unavailable') no-repeat center center;
+            background: url('https://via.placeholder.com/350x200.png?text=No+Image') no-repeat center center;
             background-size: cover;
         }
 
-        .item-card .card-body {
-            padding: 15px;
-            position: relative;
-        }
-
-        .item-card .card-body h5 {
-            font-weight: bold;
-            color: #004080;
-        }
+        .item-card .card-body { padding: 15px; }
 
         .badge {
             font-size: 14px;
             font-weight: bold;
             padding: 5px 10px;
             border-radius: 30px;
-            text-align: center;
-        }
-
-        .bg-danger {
-            background-color: #dc3545;
-            color: white;
-        }
-
-        .bg-success {
-            background-color: #28a745;
-            color: white;
         }
 
         .filters-container {
@@ -131,12 +105,10 @@
             margin-bottom: 20px;
         }
 
-        .filters-container select,
-        .filters-container input {
+        .filters-container select, .filters-container input {
             border-radius: 30px;
             padding: 10px 15px;
             border: 1px solid #ddd;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         footer {
@@ -150,143 +122,109 @@
             justify-content: center;
             align-items: center;
             height: 43px;
-            z-index: 1000;
-            margin: 0;
-        }
-
-        .no-items {
-            text-align: center;
-            font-size: 1.2em;
-            color: #6c757d;
-            margin-top: 20px;
-        }
-
-        .recent-item {
-            font-size: 14px;
-            margin-bottom: 10px;
-        }
-
-        .recent-item strong {
-            display: block;
-        }
-
-        .p-3 {
-            border: 1px solid #ddd;
         }
     </style>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg">
         <div class="container-fluid">
-            <a class="navbar-brand" href="#">Lost & Found</a>
+            <a class="navbar-brand" href="{{ url_for('dashboard') }}">Lost & Found</a>
             <div>
-                {% if current_user.id == 'temp' %}
-                <a href="{{ url_for('login') }}" class="btn btn-outline-light">Login</a>
+                {% if current_user.is_authenticated %}
+                    <span class="text-white me-3">Welcome, {{ current_user.username }}</span>
+                    <a href="{{ url_for('profile') }}" class="btn btn-outline-light btn-sm">Profile</a>
+                    <a href="{{ url_for('show_locations') }}" class="btn btn-outline-light btn-sm ms-2">Locations</a>
+                    <a href="{{ url_for('logout') }}" class="btn btn-danger btn-sm ms-2">Logout</a>
                 {% else %}
-                <a href="{{ url_for('profile') }}" class="btn btn-outline-light">Profile</a>
-                <a href="{{ url_for('show_locations') }}" class="btn btn-outline-light ms-2">Show Locations</a>  <!-- New button added here -->
+                    <a href="{{ url_for('login') }}" class="btn btn-outline-light">Login</a>
                 {% endif %}
             </div>
         </div>
     </nav>
-    <div id="main-content" class="container-fluid">
+
+    <div id="main-content" class="container-fluid mb-5">
         <div id="sidebar">
             <h4>Quick Actions</h4>
-            <a href="{{ url_for('report') }}" class="btn btn-primary">Report Lost Item</a>
-            <a href="{{ url_for('report') }}" class="btn btn-success">Report Found Item</a>
-            {% if admin_status %}
-            <a href="{{ url_for('admin_dashboard') }}" class="btn btn-warning">Admin Dashboard</a>
+            <a href="{{ url_for('report') }}" class="btn btn-primary"><i class="fas fa-search"></i> Report Lost Item</a>
+            <a href="{{ url_for('report') }}" class="btn btn-success"><i class="fas fa-plus"></i> Report Found Item</a>
+            
+            {% if current_user.role == 'admin' %}
+                <hr>
+                <h4>Management</h4>
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-warning text-dark">Admin Dashboard</a>
             {% endif %}
+
+            {% if current_user.role == 'it_admin' %}
+                <hr>
+                <h4>IT Controls</h4>
+                <a href="{{ url_for('it_dashboard') }}" class="btn btn-dark">IT Admin Dashboard</a>
+            {% endif %}
+
             <hr>
             <h4>Statistics</h4>
-            <div class="p-3 bg-light rounded">
+            <div class="p-3 bg-light rounded border">
                 <p><strong>Total Items:</strong> {{ total_items or 0 }}</p>
                 <p><strong>Lost Items:</strong> {{ total_lost or 0 }}</p>
                 <p><strong>Found Items:</strong> {{ total_found or 0 }}</p>
             </div>
-            <hr>
-            <h4>Priority Reported</h4>
-            {% if recent_items %}
-            {% for item in recent_items %}
-            <div class="recent-item">
-                <strong>{{ item[1] }}</strong>
-                {{ 'Lost' if item[4] == 'lost' else 'Found' }} - {{ item[9] }}
-            </div>
-            {% endfor %}
-            {% else %}
-            <p>No recent items found.</p>
-            {% endif %}
         </div>
 
         <div id="content">
             <div class="filters-container">
-                <input type="text" id="search" class="form-control" placeholder="Search items...">
-                <select id="status-filter" class="form-select">
+                <input type="text" id="search" class="form-control w-50" placeholder="Search items...">
+                <select id="status-filter" class="form-select w-auto">
                     <option value="all">All Statuses</option>
                     <option value="lost">Lost</option>
                     <option value="found">Found</option>
-                </select>
-                <select id="priority-filter" class="form-select">
-                    <option value="all">All Priorities</option>
-                    <option value="3">High</option>
-                    <option value="2">Medium</option>
-                    <option value="1">Low</option>
                 </select>
             </div>
 
             <div id="items" class="d-flex flex-wrap gap-3">
                 {% if items %}
-                {% for item in items %}
-                <div class="item-card" data-priority="{{ item[5] }}" data-status="{{ item[4] }}">
-                    <img src="{{ url_for('static', filename=item[6]) }}" class="{{ 'fallback' if not item[6] }}">
-                    <div class="card-body">
-                        <span class="badge {{ 'bg-danger' if item[4] == 'lost' else 'bg-success' }}">
-                            {{ 'Lost' if item[4] == 'lost' else 'Found' }}
-                        </span>
-                        <h5>{{ item[1] }}</h5>
-                        <p>{{ item[2] }}</p>
-                        <div><strong>Location:</strong> {{ item[7] }}</div>
-                        <div><strong>Contact:</strong> {{ item[8] }}</div>
-                        <div><strong>Date:</strong> {{ item[9] }}</div>
+                    {% for item in items %}
+                    <div class="item-card" data-status="{{ item[4] }}">
+                        <img src="{{ url_for('static', filename=item[6]) if item[6] else '#' }}" class="{{ 'fallback' if not item[6] }}">
+                        <div class="card-body">
+                            <span class="badge {{ 'bg-danger' if item[4] == 'lost' else 'bg-success' }}">
+                                {{ item[4]|capitalize }}
+                            </span>
+                            <h5 class="mt-2">{{ item[1] }}</h5>
+                            <p class="text-muted small">{{ item[2] }}</p>
+                            <div class="small"><strong>Location:</strong> {{ item[7] }}</div>
+                            <div class="small"><strong>Date:</strong> {{ item[9] }}</div>
+                        </div>
                     </div>
-                </div>
-                {% endfor %}
+                    {% endfor %}
                 {% else %}
-                <p class="no-items">No items found. Try adjusting your filters or <a href="{{ url_for('report') }}">report a lost item</a>.</p>
+                    <div class="no-items text-center w-100 mt-5">
+                        <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                        <p>No items found. <a href="{{ url_for('report') }}">Report something new!</a></p>
+                    </div>
                 {% endif %}
             </div>
         </div>
     </div>
 
     <footer>
-        <p>&copy; 2024 Lost & Found. Made By OnlyNandan.</p>
+        <p class="mb-0">&copy; 2024 Lost & Found. Made By OnlyNandan.</p>
     </footer>
 
     <script>
+        // Search functionality
         document.getElementById('search').addEventListener('input', function () {
             const query = this.value.toLowerCase();
-            const items = document.querySelectorAll('.item-card');
-
-            items.forEach(item => {
+            document.querySelectorAll('.item-card').forEach(item => {
                 const title = item.querySelector('h5').textContent.toLowerCase();
                 item.style.display = title.includes(query) ? '' : 'none';
             });
         });
 
-        document.querySelectorAll('select').forEach(select => {
-            select.addEventListener('change', () => {
-                const statusFilter = document.getElementById('status-filter').value;
-                const priorityFilter = document.getElementById('priority-filter').value;
-
-                document.querySelectorAll('.item-card').forEach(item => {
-                    const itemStatus = item.getAttribute('data-status').toLowerCase();
-                    const itemPriority = item.getAttribute('data-priority').toLowerCase();
-
-                    const matchesStatus = (statusFilter === 'all' || itemStatus === statusFilter);
-                    const matchesPriority = (priorityFilter === 'all' || itemPriority === priorityFilter);
-
-                    item.style.display = matchesStatus && matchesPriority ? '' : 'none';
-                });
+        // Filter functionality
+        document.getElementById('status-filter').addEventListener('change', function() {
+            const filter = this.value;
+            document.querySelectorAll('.item-card').forEach(item => {
+                const status = item.getAttribute('data-status');
+                item.style.display = (filter === 'all' || status === filter) ? '' : 'none';
             });
         });
     </script>

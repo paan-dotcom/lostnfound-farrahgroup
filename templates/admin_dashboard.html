@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Management Control</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        .admin-header { background: #ffc107; padding: 30px; border-bottom: 5px solid #e0a800; }
+        .card { margin-top: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="admin-header text-center">
+        <h1>Admin Management Control</h1>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-dark">Back to Main Dashboard</a>
+    </div>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card p-4 text-center">
+                    <h3>User Control</h3>
+                    <a href="{{ url_for('manage_permissions') }}" class="btn btn-warning w-50 mx-auto">View All Users</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header bg-dark text-white">Manage User Reports</div>
+            <div class="card-body">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Status</th>
+                            <th>Reported By</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        <tr>
+                            <td>{{ item.title }}</td>
+                            <td>
+                                <span class="badge {{ 'bg-success' if item.priority == 0 else 'bg-warning text-dark' }}">
+                                    {{ 'Solved' if item.priority == 0 else 'Pending' }}
+                                </span>
+                            </td>
+                            <td>{{ item.author.username }}</td>
+                            <td>
+                                <form action="{{ url_for('update_report', item_id=item.id) }}" method="POST" style="display:inline;">
+                                    <button class="btn btn-sm btn-success">Mark Solved</button>
+                                </form>
+                                <form action="{{ url_for('delete_report', item_id=item.id) }}" method="POST" style="display:inline;">
+                                    <button class="btn btn-sm btn-danger" onclick="return confirm('Delete this report?')">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

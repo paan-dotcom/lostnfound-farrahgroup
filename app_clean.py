@@ -1,8 +1,12 @@
 import os
 import time
 import requests
+import uuid
+from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta
 from collections import defaultdict
+
+
 
 from flask import (
     Flask, render_template, request,
@@ -32,6 +36,14 @@ MAX_FAILED_ATTEMPTS = 5
 LOCK_TIME_MINUTES = 15
 RATE_LIMIT = 5          # requests
 RATE_WINDOW = 60        # seconds
+
+app.config['UPLOAD_FOLDER'] = 'static/uploads'
+app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024  # 2MB Limit
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # hCaptcha
 HCAPTCHA_SITEKEY = os.getenv("HCAPTCHA_SITEKEY")
@@ -95,13 +107,22 @@ class User(UserMixin, db.Model):
     failed_attempts = db.Column(db.Integer, default=0)
     locked_until = db.Column(db.DateTime, nullable=True)
 
+
 class Item(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    type = db.Column(db.String(10), nullable=False)
+    type = db.Column(db.String(10), nullable=False) # 'lost' or 'found'
     title = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text, nullable=False)
-    owner_id = db.Column(db.Integer, nullable=False)
+    location = db.Column(db.String(100), nullable=False) # ADDED
+    category = db.Column(db.String(50), nullable=False)  # ADDED
+    contact_info = db.Column(db.String(100), nullable=False) # ADDED
+    owner_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    image_file = db.Column(db.String(100), nullable=True, default='default.jpg') # ADD THIS
+
+    # This links the item to the User who posted it
+    owner = db.relationship('User', backref=db.backref('items', lazy=True))
 
 class AuditLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -135,10 +156,63 @@ def is_locked(user):
 # =====================================================
 # ROUTES
 # =====================================================
-@app.route("/", methods=["GET", "POST"])
+# =====================================================
+# UPDATED ROUTES
+# =====================================================
+
+@app.route("/admin/logs")
+@login_required
+def view_logs():
+    if not current_user.is_admin:
+        flash("Access denied: Admins only.", "danger")
+        return redirect(url_for("home"))
+    
+    logs = AuditLog.query.order_by(AuditLog.timestamp.desc()).all()
+    # UPDATED THIS LINE TO MATCH YOUR FILENAME
+    return render_template("admin_logs.html", logs=logs)
+
+@app.route("/report", methods=["GET", "POST"])
+@login_required
+def report():
+    if request.method == "POST":
+        file = request.files.get('image')
+        filename = None
+        if file and allowed_file(file.filename):
+            # secure_filename prevents "Path Traversal" (hacking filenames)
+            ext = file.filename.rsplit('.', 1)[1].lower()
+            filename = secure_filename(f"{uuid.uuid4().hex}.{ext}")
+            
+            # Ensure the folder exists
+            if not os.path.exists(app.config['UPLOAD_FOLDER']):
+                os.makedirs(app.config['UPLOAD_FOLDER'])
+                
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+
+        # These names MUST match the 'name' attribute in your HTML
+        new_item = Item(
+            type=request.form.get("type"),           # matches <select name="type">
+            title=request.form.get("title"),         # matches <input name="title">
+            category=request.form.get("category"),   # matches <select name="category">
+            location=request.form.get("location"),   # matches <select name="location">
+            description=request.form.get("description"), # matches <textarea name="description">
+            contact_info=request.form.get("contact_info"), # matches <input name="contact_info">
+            owner_id=current_user.id,
+            image_file=filename,
+        )
+        db.session.add(new_item)
+        db.session.commit()
+        
+        flash("Report submitted successfully!", "success")
+        return redirect(url_for('home'))
+        
+    return render_template("report.html")
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     ip = request.remote_addr
+    
+    if current_user.is_authenticated:
+        return redirect(url_for("home"))
 
     if is_rate_limited(ip):
         flash("Too many requests. Slow down.", "danger")
@@ -152,7 +226,11 @@ def login():
             flash("Captcha verification failed", "danger")
             return redirect(url_for("login"))
 
-        user = User.query.filter_by(username=request.form["username"]).first()
+        # UPDATED: This allows login via either Username OR Email
+        identifier = request.form.get("username")
+        user = User.query.filter(
+            (User.username == identifier) | (User.email == identifier)
+        ).first()
 
         if not user:
             flash("Invalid credentials", "danger")
@@ -169,6 +247,7 @@ def login():
 
             login_user(user)
             log_event(f"Login success: {user.username}")
+            # Ensure this points to the "home" endpoint
             return redirect(url_for("home"))
 
         # failed password
@@ -185,6 +264,41 @@ def login():
     return render_template(
         "login.html",
         hcaptcha_sitekey=os.getenv("HCAPTCHA_SITEKEY")
+    )
+
+@app.route("/")
+def index():
+    return redirect(url_for("login"))
+
+@app.route("/home")
+@login_required
+def home():
+    # 1. Handle Search and Filters
+    q = request.args.get('q', '')
+    status = request.args.get('status', '')
+    category = request.args.get('category', '')
+
+    query = Item.query
+    if q:
+        query = query.filter(Item.title.contains(q) | Item.description.contains(q))
+    if status:
+        query = query.filter(Item.type == status)
+    if category:
+        query = query.filter(Item.category == category)
+
+    items = query.order_by(Item.created_at.desc()).all()
+
+    # 2. Calculate Stats for the Hero Section
+    total = Item.query.count()
+    lost = Item.query.filter_by(type='lost').count()
+    found = Item.query.filter_by(type='found').count()
+
+    return render_template(
+        "home.html", 
+        items=items, 
+        total=total, 
+        lost=lost, 
+        found=found
     )
 
 # -----------------------------------------------------
@@ -205,6 +319,7 @@ def create():
             return redirect(url_for("create"))
 
         username = request.form["username"]
+        email = request.form["email"]  # <--- MUST HAVE THIS
         password = request.form["password"]
 
         if User.query.filter_by(username=username).first():
@@ -213,6 +328,7 @@ def create():
 
         user = User(
             username=username,
+            email=email,      # <--- AND THIS
             password=generate_password_hash(password)
         )
 
@@ -227,13 +343,6 @@ def create():
         "create.html",
         hcaptcha_sitekey=os.getenv("HCAPTCHA_SITEKEY")
     )
-
-# -----------------------------------------------------
-@app.route("/home")
-@login_required
-def home():
-    items = Item.query.order_by(Item.created_at.desc()).all()
-    return render_template("home.html", items=items)
 
 # -----------------------------------------------------
 @app.route("/logout")

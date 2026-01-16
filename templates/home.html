@@ -116,8 +116,23 @@
         {% if items %}
           <div class="items">
             {% for item in items %}
+            {% if item.image_file %}
+  <img src="{{ url_for('static', filename='uploads/' + item.image_file) }}" 
+       style="width:100%; border-radius:12px; margin-bottom:10px;">
+{% endif %}
               <div class="item">
+                {% if item.image_file %}
+    <div style="margin-bottom: 15px;">
+        <img src="{{ url_for('static', filename='uploads/' + item.image_file) }}" 
+             style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 12px; border: 1px solid #eee;">
+    </div>
+    {% endif %}
+    
+    <span class="badge {% if item.type|lower == 'lost' %}badge-lost{% else %}badge-found{% endif %}">
+      {{ item.type }}
+    </span>
                 <div class="item-content">
+
                   <span class="badge {% if item.type|lower == 'lost' %}badge-lost{% else %}badge-found{% endif %}">
                     {{ item.type }}
                   </span>

@@ -18,7 +18,7 @@
 
 <div class="topbar">
   <b>UniKL Lost & Found</b>
-  <a href="{{ url_for('dashboard') }}" class="nav-link">← Back</a>
+  <a href="{{ url_for('home') }}" class="nav-link">← Back</a>
 </div>
 
 <div class="card">
@@ -43,13 +43,17 @@
     <input name="title" required>
 
     <label>Category</label>
-    <select name="category" required>
-      <option value="Student ID">Student ID</option>
-      <option value="Wallet">Wallet</option>
-      <option value="Phone">Phone</option>
-      <option value="Laptop">Laptop</option>
-      <option value="Other">Other</option>
-    </select>
+<select name="category" required>
+    <option value="Phone">Phone / Tablet</option>
+    <option value="Student ID">Student ID / Matric Card</option>
+    <option value="Wallet">Wallet / Purse</option>
+    <option value="Laptop">Laptop / Charger</option>
+    <option value="Keys">Keys</option>
+    <option value="Earbuds">Earbuds / Headphones</option>
+    <option value="Bag">Bag / Backpack</option>
+    <option value="Books">Books / Notes</option>
+    <option value="Other">Other</option>
+</select>
 
     <label>Location</label>
     <select name="location" required>

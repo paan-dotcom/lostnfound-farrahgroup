@@ -2,34 +2,62 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>IT Admin Dashboard</title>
+    <title>IT Systems Control</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 </head>
 <body class="bg-light">
-    <nav class="navbar navbar-dark bg-dark px-4">
-        <span class="navbar-brand mb-0 h1">IT Systems Control</span>
-        <a href="{{ url_for('logout') }}" class="btn btn-outline-danger">Logout</a>
+    <nav class="navbar navbar-dark bg-dark mb-4">
+        <div class="container-fluid">
+            <span class="navbar-brand">IT Security Monitor</span>
+            <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm">Logout</a>
+        </div>
     </nav>
 
-    <div class="container mt-5" style="max-width: 800px;">
-        <h1 class="mb-4">Welcome, IT Administrator: <span class="text-primary">{{ current_user.username }}</span></h1>
+    <div class="container">
+        <h2 class="mb-4">Blocked Users (Brute Force Protection)</h2>
         
-        <div class="alert alert-primary shadow-sm" role="alert">
-            <h4 class="alert-heading">System Status</h4>
-            <p class="mb-0">All systems operational. Database connected.</p>
-        </div>
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            {% for message in messages %}
+              <div class="alert alert-info">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
 
-        <h3 class="mt-4">Admin Tools</h3>
-        <div class="list-group shadow-sm">
-            <a href="{{ url_for('view_logs') }}" class="list-group-item list-group-item-action py-3">
-                <strong>Manage Server Logs</strong>
-            </a>
-            <a href="{{ url_for('backup_db') }}" class="list-group-item list-group-item-action py-3">
-                <strong>Database Backups</strong>
-            </a>
-            <a href="{{ url_for('manage_permissions') }}" class="list-group-item list-group-item-action py-3">
-                <strong>User Permissions Registry</strong>
-            </a>
+        <div class="card shadow">
+            <div class="card-body">
+                <table class="table table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>User ID</th>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Failed Attempts</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td>{{ user.id }}</td>
+                            <td>{{ user.username }}</td>
+                            <td>{{ user.email }}</td>
+                            <td><span class="badge bg-danger">{{ user.failed_attempts }}</span></td>
+                            <td><span class="text-danger font-weight-bold">BLOCKED</span></td>
+                            <td>
+                                <a href="{{ url_for('unblock_user', user_id=user.id) }}" 
+                                   class="btn btn-success btn-sm">Unblock & Reset</a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted">No accounts are currently blocked.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </body>

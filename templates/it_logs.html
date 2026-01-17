@@ -2,29 +2,60 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>System Logs - IT Admin</title>
+    <title>IT Audit Logs (A09) - UniKL</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        .log-table { font-size: 0.9rem; }
+        .ip-code { background: #f1f5f9; padding: 2px 5px; border-radius: 4px; font-family: monospace; }
+        .timestamp { color: #64748b; min-width: 160px; }
+    </style>
 </head>
 <body class="bg-light">
-    <div class="container mt-5">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2><i class="fas fa-terminal"></i> System Activity Logs</h2>
-            <a href="{{ url_for('it_dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+    <nav class="navbar navbar-dark bg-dark mb-4">
+        <div class="container">
+            <span class="navbar-brand">System Security Monitor (A09)</span>
+            <a href="{{ url_for('it_dashboard') }}" class="btn btn-outline-light btn-sm">Back to Dashboard</a>
         </div>
+    </nav>
 
-        <div class="card shadow">
-            <div class="card-header bg-dark text-white">Recent Events</div>
+    <div class="container">
+        <div class="card shadow border-0">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0">Full System Audit History</h5>
+            </div>
             <div class="card-body p-0">
-                <ul class="list-group list-group-flush">
-                    {% for log in logs %}
-                    <li class="list-group-item">
-                        <span class="badge bg-info text-dark me-2">INFO</span>
-                        {{ log }}
-                    </li>
-                    {% else %}
-                    <li class="list-group-item text-center">No logs found.</li>
-                    {% endfor %}
-                </ul>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 log-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Timestamp (UTC)</th>
+                                <th>User ID / Username</th>
+                                <th>Action Performed</th>
+                                <th>IP Address</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in logs %}
+                            <tr>
+                                <td class="timestamp">{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                <td>
+                                    {% if log.user %}
+                                        <span class="badge bg-secondary">ID: {{ log.user_id }}</span> {{ log.user.username }}
+                                    {% else %}
+                                        <span class="text-muted">System/Guest</span>
+                                    {% endif %}
+                                </td>
+                                <td><strong>{{ log.action }}</strong></td>
+                                <td><span class="ip-code">{{ log.ip_address }}</span></td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center py-5 text-muted">No activity logs found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>

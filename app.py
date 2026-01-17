@@ -18,7 +18,7 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
 
-# Models
+# --- Models ---
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
@@ -67,7 +67,12 @@ def home():
 def login():
     if request.method == "POST":
         user = User.query.filter_by(username=request.form.get("username")).first()
-        if user and not user.is_blocked:
+        if user:
+            if user.is_blocked:
+                log_event(f"Blocked User Login Attempt: {user.username}")
+                flash("Account blocked. Please contact IT.")
+                return render_template("login.html")
+            
             if check_password_hash(user.password, request.form.get("password")):
                 user.failed_attempts = 0
                 db.session.commit()
@@ -78,10 +83,16 @@ def login():
                 return redirect(url_for("user_dashboard"))
             else:
                 user.failed_attempts += 1
-                if user.failed_attempts >= 3: user.is_blocked = True
+                if user.failed_attempts >= 3: 
+                    user.is_blocked = True
+                    log_event(f"Account Locked (Brute Force): {user.username}")
+                else:
+                    log_event(f"Login Fail: {user.username}")
                 db.session.commit()
-                log_event(f"Login Fail: {user.username}")
-        flash("Invalid login or account blocked.")
+        else:
+            log_event(f"Unknown User Login Attempt: {request.form.get('username')}")
+        
+        flash("Invalid login credentials.")
     return render_template("login.html")
 
 @app.route("/logout")
@@ -130,7 +141,7 @@ def submit_report():
         )
         db.session.add(new_report)
         db.session.commit()
-        log_event("New Report Submitted", current_user.id)
+        log_event(f"New Report Submitted: {new_report.title}", current_user.id)
         return redirect(url_for("user_dashboard"))
     return render_template("report.html")
 
@@ -150,6 +161,7 @@ def solve_item(item_id):
     if item:
         item.status = "Solved"
         db.session.commit()
+        log_event(f"Item Mark Solved: {item.title}", current_user.id)
     return redirect(url_for('admin_dashboard'))
 
 @app.route("/admin/delete/<int:item_id>")
@@ -157,22 +169,46 @@ def solve_item(item_id):
 def delete_item(item_id):
     item = Item.query.get(item_id)
     if item:
+        title = item.title
         db.session.delete(item)
         db.session.commit()
+        log_event(f"Item Deleted: {title}", current_user.id)
     return redirect(url_for('admin_dashboard'))
 
-# --- IT Admin Routes ---
+# --- IT Admin Dashboard (Enhanced Monitoring) ---
 
 @app.route("/it-dashboard")
 @login_required
 def it_dashboard():
-    if current_user.role != 'it_admin': return redirect(url_for('login'))
+    if current_user.role != 'it_admin': 
+        return redirect(url_for('login'))
+    
+    # 1. Fetch Blocked Users
     blocked = User.query.filter_by(is_blocked=True).all()
-    return render_template("it_dashboard.html", users=blocked)
+    
+    # 2. Get Activity Statistics
+    login_count = AuditLog.query.filter(AuditLog.action.like('%Login Success%')).count()
+    report_count = AuditLog.query.filter(AuditLog.action.like('%New Report%')).count()
+    
+    # 3. Detect Potential Attacks (e.g., any failed login attempts)
+    attack_alerts = AuditLog.query.filter(AuditLog.action.like('%Login Fail%')).order_by(AuditLog.timestamp.desc()).limit(5).all()
+    attack_count = AuditLog.query.filter(AuditLog.action.like('%Login Fail%')).count()
+
+    # 4. Get Latest 10 General Logs for the "Live Feed"
+    recent_logs = AuditLog.query.order_by(AuditLog.timestamp.desc()).limit(10).all()
+
+    return render_template("it_dashboard.html", 
+                           users=blocked, 
+                           login_count=login_count, 
+                           report_count=report_count,
+                           attack_count=attack_count,
+                           attack_alerts=attack_alerts,
+                           recent_logs=recent_logs)
 
 @app.route("/it/unblock/<int:user_id>")
 @login_required
 def unblock_user(user_id):
+    if current_user.role != 'it_admin': return redirect(url_for('login'))
     user = User.query.get(user_id)
     if user:
         user.is_blocked = False

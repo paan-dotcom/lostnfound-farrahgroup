@@ -1,63 +1,99 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>IT Systems Control</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-</head>
-<body class="bg-light">
-    <nav class="navbar navbar-dark bg-dark mb-4">
-        <div class="container-fluid">
-            <span class="navbar-brand">IT Security Monitor</span>
-            <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm">Logout</a>
-        </div>
-    </nav>
-
-    <div class="container">
-        <h2 class="mb-4">Blocked Users (Brute Force Protection)</h2>
+    <title>IT Admin - Security Monitor</title>
+    <style>
+        body { font-family: sans-serif; background: #f8fafc; margin: 0; }
+        .sidebar { width: 250px; height: 100vh; background: #0f172a; color: white; position: fixed; padding: 20px; }
+        .main-content { margin-left: 290px; padding: 40px; }
         
-        {% with messages = get_flashed_messages() %}
-          {% if messages %}
-            {% for message in messages %}
-              <div class="alert alert-info">{{ message }}</div>
-            {% endfor %}
-          {% endif %}
-        {% endwith %}
+        /* Stat Cards */
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 5px solid #3b82f6; }
+        .stat-card.alert { border-left-color: #ef4444; }
+        .stat-card h3 { margin: 0; font-size: 14px; color: #64748b; text-transform: uppercase; }
+        .stat-card p { font-size: 28px; font-weight: bold; margin: 10px 0 0; color: #1e293b; }
 
-        <div class="card shadow">
-            <div class="card-body">
-                <table class="table table-hover">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>User ID</th>
-                            <th>Username</th>
-                            <th>Email</th>
-                            <th>Failed Attempts</th>
-                            <th>Status</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for user in users %}
-                        <tr>
-                            <td>{{ user.id }}</td>
-                            <td>{{ user.username }}</td>
-                            <td>{{ user.email }}</td>
-                            <td><span class="badge bg-danger">{{ user.failed_attempts }}</span></td>
-                            <td><span class="text-danger font-weight-bold">BLOCKED</span></td>
-                            <td>
-                                <a href="{{ url_for('unblock_user', user_id=user.id) }}" 
-                                   class="btn btn-success btn-sm">Unblock & Reset</a>
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="6" class="text-center text-muted">No accounts are currently blocked.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+        /* Tables and Logs */
+        .monitor-section { background: white; padding: 25px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th { text-align: left; padding: 12px; border-bottom: 2px solid #f1f5f9; color: #475569; }
+        td { padding: 12px; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+        
+        .badge { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; }
+        .badge-fail { background: #fee2e2; color: #991b1b; }
+        .badge-success { background: #dcfce7; color: #166534; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>UniKL Security</h2>
+        <hr>
+        <p><a href="{{ url_for('it_dashboard') }}" style="color:white">Dashboard</a></p>
+        <p><a href="{{ url_for('it_logs') }}" style="color:white">Full Audit Logs</a></p>
+        <p><a href="{{ url_for('logout') }}" style="color:white">Logout</a></p>
+    </div>
+
+    <div class="main-content">
+        <h1>Security Control Center</h1>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Successful Logins</h3>
+                <p>{{ login_count }}</p>
             </div>
+            <div class="stat-card">
+                <h3>Items Reported</h3>
+                <p>{{ report_count }}</p>
+            </div>
+            <div class="stat-card alert">
+                <h3>Detected Attack Attempts</h3>
+                <p>{{ attack_count }}</p>
+            </div>
+        </div>
+
+        <div class="monitor-section" style="border: 2px solid #fee2e2;">
+            <h2 style="color: #991b1b;">⚠️ Recent Attack Alerts (Brute Force Detection)</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Event</th>
+                        <th>Source IP</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for alert in attack_alerts %}
+                    <tr>
+                        <td>{{ alert.timestamp.strftime('%H:%M:%S') }}</td>
+                        <td><span class="badge badge-fail">{{ alert.action }}</span></td>
+                        <td><code>{{ alert.ip_address }}</code></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="monitor-section">
+            <h2>Manage Blocked Users</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.email }}</td>
+                        <td><a href="{{ url_for('unblock_user', user_id=user.id) }}">Unblock User</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </body>

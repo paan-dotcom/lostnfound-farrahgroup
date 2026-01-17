@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Management - Lost & Found</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        .item-img { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid #dee2e6; }
+        .status-badge { font-size: 0.8rem; padding: 5px 10px; }
+    </style>
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="#">Admin Portal</a>
+            <div class="ms-auto">
+                <a href="{{ url_for('logout') }}" class="btn btn-light btn-sm">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Reported Items Management</h2>
+            <span class="badge bg-secondary">Total Reports: {{ items|length }}</span>
+        </div>
+
+        <div class="card shadow border-0">
+            <div class="card-body p-0">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Image</th>
+                            <th>Details</th>
+                            <th>Category & Location</th>
+                            <th>Status</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        <tr>
+                            <td>
+                                {% if item.image %}
+                                    <img src="{{ url_for('static', filename='images/' + item.image) }}" class="item-img">
+                                {% else %}
+                                    <div class="item-img bg-secondary d-flex align-items-center justify-content-center text-white small">No Image</div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <strong>{{ item.title }}</strong><br>
+                                <small class="text-muted">{{ item.description[:50] }}...</small>
+                            </td>
+                            <td>
+                                <span class="badge bg-info text-dark">{{ item.category }}</span><br>
+                                <small class="text-muted">{{ item.location }}</small>
+                            </td>
+                            <td>
+                                {% if item.status == 'Pending' %}
+                                    <span class="badge bg-warning status-badge">Pending</span>
+                                {% else %}
+                                    <span class="badge bg-success status-badge">Solved</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <a href="{{ url_for('solve_item', item_id=item.id) }}" class="btn btn-sm btn-outline-success">Mark Solved</a>
+                                <a href="{{ url_for('delete_item', item_id=item.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this report?')">Delete</a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center py-5 text-muted">No items have been reported yet.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Dashboard - UniKL</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-dark bg-dark mb-4 px-4">
+        <span class="navbar-brand">UniKL Lost & Found</span>
+        <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm">Logout</a>
+    </nav>
+
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>My Reported Items</h2>
+            <a href="{{ url_for('submit_report') }}" class="btn btn-primary">Submit New Report</a>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-6 mx-auto">
+                <form action="{{ url_for('user_dashboard') }}" method="GET" class="d-flex shadow-sm">
+                    <input type="text" name="q" class="form-control me-2" placeholder="Search by item name..." value="{{ request.args.get('q', '') }}">
+                    <button type="submit" class="btn btn-dark">Search</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="row">
+            {% for item in items %}
+            <div class="col-md-4 mb-4">
+                <div class="card shadow-sm h-100">
+                    {% if item.image %}
+                    <img src="{{ url_for('static', filename='images/' + item.image) }}" class="card-img-top" style="height:200px; object-fit:cover;">
+                    {% else %}
+                    <div class="bg-secondary text-white text-center py-5">No Image</div>
+                    {% endif %}
+                    <div class="card-body">
+                        <span class="badge {% if item.status == 'Pending' %}bg-warning{% else %}bg-success{% endif %} mb-2">{{ item.status }}</span>
+                        <h5 class="card-title">{{ item.title }}</h5>
+                        <p class="card-text small text-muted">{{ item.description }}</p>
+                        <p class="mb-0"><strong>Location:</strong> {{ item.location }}</p>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <p class="text-center text-muted mt-5">No items found matching your search.</p>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>

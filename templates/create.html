@@ -2,56 +2,54 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Register - Lost & Found</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <title>Register - UniKL Lost & Found</title>
     <style>
-        .password-hint { font-size: 0.85rem; color: #6c757d; }
-        .requirement { margin-bottom: 2px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0284c7; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .card { background: white; padding: 40px; border-radius: 20px; width: 100%; max-width: 420px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        h2 { margin-top: 0; color: #0f172a; text-align: center; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1.5px solid #e2e8f0; box-sizing: border-box; }
+        
+        /* Requirement box styling */
+        .policy-box { background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; margin-bottom: 15px; }
+        .policy-box p { margin: 0 0 5px 0; font-size: 13px; font-weight: bold; color: #475569; }
+        .policy-box ul { margin: 0; padding-left: 20px; font-size: 12px; color: #64748b; }
+        
+        .btn-reg { width: 100%; padding: 14px; background: #0284c7; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-reg:hover { background: #0369a1; }
+        .back { display: block; text-align: center; margin-top: 20px; color: #64748b; text-decoration: none; font-size: 14px; }
     </style>
 </head>
-<body class="bg-light">
-    <div class="container py-5">
-        <div class="row justify-content-center">
-            <div class="col-md-6">
-                <div class="card shadow">
-                    <div class="card-body">
-                        <h3 class="text-center mb-4">Create New Account</h3>
-                        
-                        <form action="{{ url_for('create') }}" method="POST">
-                            <div class="mb-3">
-                                <label class="form-label">Username</label>
-                                <input type="text" name="username" class="form-control" placeholder="Choose a unique username" required>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label class="form-label">Email Address</label>
-                                <input type="email" name="email" class="form-control" placeholder="name@example.com" required>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label class="form-label">Password</label>
-                                <input type="password" name="password" class="form-control" required>
-                                <div class="password-hint mt-2">
-                                    <p class="requirement"><strong>Policy Requirements:</strong></p>
-                                    <ul class="list-unstyled">
-                                        <li>✔ At least 8 characters</li>
-                                        <li>✔ One Uppercase (A-Z)</li>
-                                        <li>✔ One Lowercase (a-z)</li>
-                                        <li>✔ One Number (0-9)</li>
-                                    </ul>
-                                </div>
-                            </div>
+<body>
+    <div class="card">
+        <h2>Create Account</h2>
+        
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            {% for message in messages %}
+              <div style="color: #ef4444; background: #fee2e2; padding: 10px; border-radius: 8px; margin-bottom: 10px; font-size: 13px; text-align: center;">
+                {{ message }}
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
 
-                            <button type="submit" class="btn btn-success w-100">Register Account</button>
-                        </form>
-                        
-                        <div class="text-center mt-4">
-                            <a href="{{ url_for('login') }}" class="text-decoration-none">Already have an account? Login here</a>
-                        </div>
-                    </div>
-                </div>
+        <form action="{{ url_for('create_user') }}" method="POST">
+            <input type="text" name="username" placeholder="Username" required>
+            <input type="email" name="email" placeholder="Email (e.g. @unikl.edu.my)" required>
+            <input type="password" name="password" placeholder="Password" required>
+            
+            <div class="policy-box">
+                <p>Password Requirements:</p>
+                <ul>
+                    <li>At least 8 characters long</li>
+                    <li>Must include a number (0-9)</li>
+                    <li>Must include a special character (@#$%^&+=!)</li>
+                </ul>
             </div>
-        </div>
+
+            <button type="submit" class="btn-reg">Register Account</button>
+            <a href="{{ url_for('login') }}" class="back">Already have an account? Login</a>
+        </form>
     </div>
 </body>
 </html>

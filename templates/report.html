@@ -5,23 +5,15 @@
   <title>Report Item - UniKL Lost & Found</title>
   <style>
     body { font-family: 'Segoe UI', Arial, sans-serif; background:#0ea5e9; margin:0; padding-bottom: 50px; }
-    .topbar { background:#0f172a; color:white; padding:15px 40px; display:flex; justify-content:space-between; align-items:center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-    .topbar b { font-size: 18px; letter-spacing: 0.5px; }
-    .nav-link { color:white; text-decoration:none; font-weight:600; font-size: 14px; padding: 8px 16px; border-radius: 8px; transition: background 0.2s; }
-    .nav-link:hover { background: rgba(255,255,255,0.1); }
+    .topbar { background:#0f172a; color:white; padding:15px 40px; display:flex; justify-content:space-between; align-items:center; }
+    .nav-link { color:white; text-decoration:none; font-weight:600; font-size: 14px; }
     .card { width:550px; margin:40px auto; background:white; padding:40px; border-radius:24px; box-shadow: 0 15px 35px rgba(0,0,0,0.2); }
-    h2 { margin:0 0 10px; color: #0f172a; font-size: 26px; }
-    .subtitle { color: #64748b; font-size: 14px; margin-bottom: 25px; }
-    label { display: block; margin-top: 18px; font-weight: 600; color: #475569; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
-    input, select, textarea { width:100%; padding:12px; margin-top: 6px; border-radius:12px; border:1.5px solid #e2e8f0; box-sizing: border-box; font-size: 14px; transition: all 0.2s; }
-    input:focus, select:focus, textarea:focus { border-color: #0284c7; outline: none; box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.1); }
-    button { width:100%; padding:15px; border:none; border-radius:12px; background:#0284c7; color:white; font-size:16px; font-weight:bold; cursor: pointer; margin-top: 30px; transition: background 0.2s, transform 0.1s; }
-    button:hover { background:#0369a1; }
-    .security-note { margin-top: 25px; font-size: 11px; color: #94a3b8; text-align: center; border-top: 1px solid #f1f5f9; padding-top: 15px; display: flex; align-items: center; justify-content: center; gap: 5px; }
+    label { display: block; margin-top: 18px; font-weight: 600; color: #475569; font-size: 13px; text-transform: uppercase; }
+    input, select, textarea { width:100%; padding:12px; margin-top: 6px; border-radius:12px; border:1.5px solid #e2e8f0; box-sizing: border-box; }
+    button { width:100%; padding:15px; border:none; border-radius:12px; background:#0284c7; color:white; font-size:16px; font-weight:bold; cursor: pointer; margin-top: 30px; }
   </style>
 </head>
 <body>
-
   <div class="topbar">
     <div><b>UniKL Lost & Found</b></div>
     <div><a href="{{ url_for('user_dashboard') }}" class="nav-link">← Back to Dashboard</a></div>
@@ -29,10 +21,7 @@
 
   <div class="card">
     <h2>Submit a Report</h2>
-    <div class="subtitle">Enter the details of the lost or found item below.</div>
-
     <form action="{{ url_for('submit_report') }}" method="POST" enctype="multipart/form-data">
-      
       <label>Report Type</label>
       <select name="type" required>
         <option value="lost">I Lost Something</option>
@@ -40,40 +29,30 @@
       </select>
 
       <label>Item Name</label>
-      <input name="title" placeholder="e.g., Black Herschel Backpack" required />
+      <input name="title" placeholder="e.g., Black Backpack" required />
 
       <label>Category</label>
       <select name="category" required>
-        <option value="Student ID">Student ID / Matric Card</option>
-        <option value="Wallet">Wallet / Purse</option>
-        <option value="Phone">Phone / Tablet</option>
-        <option value="Laptop">Laptop / Charger</option>
-        <option value="Keys">Keys</option>
+        <option value="Student ID">Student ID</option>
+        <option value="Wallet">Wallet</option>
+        <option value="Phone">Phone</option>
+        <option value="Laptop">Laptop</option>
         <option value="Other">Other</option>
       </select>
 
-      <label>Location within Campus</label>
-      <select name="location" required>
-        <option value="Library">Library</option>
-        <option value="Cafeteria">Cafeteria</option>
-        <option value="Lecture Hall">Lecture Hall</option>
-        <option value="Other">Other Location</option>
-      </select>
+      <label>Location</label>
+      <input name="location" placeholder="e.g. Cafeteria" required />
 
       <label>Detailed Description</label>
-      <textarea name="description" rows="3" placeholder="Specify color, brand, or any unique marks..." required></textarea>
+      <textarea name="description" rows="3" required></textarea>
 
       <label>Contact Information</label>
-      <input name="contact" placeholder="Your WhatsApp number or Student Email" required />
+      <input name="contact" required />
 
-      <label>Upload Image of Item</label>
-      <input type="file" name="item_image" accept="image/*" style="padding: 8px;">
+      <label>Upload Image</label>
+      <input type="file" name="item_image" accept="image/*">
 
       <button type="submit">Submit Official Report</button>
-
-      <div class="security-note">
-        🔒 <span>Encrypted session active. Activity is recorded in the Audit Log (A09).</span>
-      </div>
     </form>
   </div>
 </body>

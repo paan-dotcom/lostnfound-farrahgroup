@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Register - UniKL Lost & Found</title>
+    <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #0284c7; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
         .card { background: white; padding: 40px; border-radius: 20px; width: 100%; max-width: 420px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
@@ -46,7 +47,10 @@
                     <li>Must include a special character (@#$%^&+=!)</li>
                 </ul>
             </div>
-
+            <div class="mb-3 text-center">
+              <div class="h-captcha"
+                   data-sitekey="{{ config.HCAPTCHA_SITE_KEY }}">
+            </div>
             <button type="submit" class="btn-reg">Register Account</button>
             <a href="{{ url_for('login') }}" class="back">Already have an account? Login</a>
         </form>

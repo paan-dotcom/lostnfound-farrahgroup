@@ -195,36 +195,51 @@ def logout():
 @app.route("/create", methods=["GET", "POST"])
 def create_user():
     if request.method == "POST":
+
+        # CAPTCHA CHECK (FIRST)
+        captcha_token = request.form.get("h-captcha-response")
+        if not captcha_token or not verify_hcaptcha(
+            captcha_token,
+            request.remote_addr
+        ):
+            log_event("Captcha Failed Registration Attempt")
+            flash("Captcha verification failed. Please try again.")
+            return render_template("create.html")
+
+        # FORM DATA
         username = request.form.get("username")
         email = request.form.get("email")
         password = request.form.get("password")
 
-        # --- Password Policy Requirements ---
-        # 1. At least 8 characters long
-        # 2. Contains at least one number
-        # 3. Contains at least one special character (@#$%^&+=!)
+        # PASSWORD POLICY
         password_regex = r"^(?=.*[0-9])(?=.*[@#$%^&+=!]).{8,}$"
-
         if not re.match(password_regex, password):
-            flash("Password must be at least 8 characters long, include a number, and a special character (@#$%^&+=!).", "danger")
-            return render_template("create.html") # Sends them back to try again
+            flash(
+                "Password must be at least 8 characters long, include a number, and a special character (@#$%^&+=!).",
+                "danger"
+            )
+            return render_template("create.html")
 
-        # Check if user already exists
+        # USER EXISTS CHECK
         if User.query.filter_by(username=username).first():
             flash("Username already taken.", "danger")
             return render_template("create.html")
 
+        # CREATE USER
         hashed_pwd = generate_password_hash(password)
-        new_user = User(username=username, email=email, password=hashed_pwd)
+        new_user = User(
+            username=username,
+            email=email,
+            password=hashed_pwd
+        )
         db.session.add(new_user)
         db.session.commit()
-        
+
         log_event(f"New User Registered: {new_user.username}")
         flash("Account created successfully! Please login.", "success")
         return redirect(url_for("login"))
-        
-    return render_template("create.html")
 
+    return render_template("create.html")
 
 
 # --- User Routes ---

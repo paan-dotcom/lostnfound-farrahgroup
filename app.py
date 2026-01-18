@@ -4,8 +4,11 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from datetime import datetime
+from dotenv import load_dotenv
+load_dotenv()
 import os
 import re
+import requests
 
 app = Flask(__name__)
 
@@ -17,9 +20,17 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 app.config["UPLOAD_FOLDER"] = "static/images"
 
-
-
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+
+
+# Captcha
+app.config["HCAPTCHA_SITE_KEY"] = os.getenv("HCAPTCHA_SITE_KEY")
+
+app.config["HCAPTCHA_SECRET"] = os.getenv("HCAPTCHA_SECRET")
+
+print("HCAPTCHA SITE:", app.config["HCAPTCHA_SITE_KEY"])
+
+print("HCAPTCHA SECRET:", app.config["HCAPTCHA_SECRET"])
 
 
 
@@ -106,6 +117,25 @@ def log_event(action, user_id=None):
     db.session.add(new_log)
 
     db.session.commit()
+    
+
+def verify_hcaptcha(token, ip):
+    payload = {
+        "secret": app.config["HCAPTCHA_SECRET"],
+        "response": token,
+        "remoteip": ip
+    }
+    try:
+        r = requests.post(
+            "https://hcaptcha.com/siteverify",
+            data=payload,
+            timeout=5
+        )
+        print("HCAPTCHA RESPONSE:", r.json())
+        return r.json().get("success", False)
+    except Exception as e:
+        print("Captcha error:", e)
+        return False
 
 
 
@@ -122,62 +152,57 @@ def home():
 
 
 @app.route("/login", methods=["GET", "POST"])
-
 def login():
-
     if request.method == "POST":
 
-        user = User.query.filter_by(username=request.form.get("username")).first()
+        # CAPTCHA FIRST
+        captcha_token = request.form.get("h-captcha-response")
+        if not captcha_token or not verify_hcaptcha(
+            captcha_token,
+            request.remote_addr
+        ):
+            log_event("Captcha Failed Login Attempt")
+            flash("Captcha verification failed. Please try again.")
+            return render_template("login.html")
+
+        # USER LOOKUP
+        user = User.query.filter_by(
+            username=request.form.get("username")
+        ).first()
 
         if user:
-
             if user.is_blocked:
-
                 log_event(f"Blocked User Login Attempt: {user.username}")
-
                 flash("Account blocked. Please contact IT.")
-
                 return render_template("login.html")
 
-            
-
-            if check_password_hash(user.password, request.form.get("password")):
-
+            if check_password_hash(
+                user.password,
+                request.form.get("password")
+            ):
                 user.failed_attempts = 0
-
                 db.session.commit()
-
                 login_user(user)
-
                 log_event("Login Success", user.id)
 
-                if user.role == 'it_admin': return redirect(url_for('it_dashboard'))
-
-                if user.role == 'admin': return redirect(url_for('admin_dashboard'))
+                if user.role == 'it_admin':
+                    return redirect(url_for('it_dashboard'))
+                if user.role == 'admin':
+                    return redirect(url_for('admin_dashboard'))
 
                 return redirect(url_for("user_dashboard"))
-
             else:
-
                 user.failed_attempts += 1
-
-                if user.failed_attempts >= 3: 
-
+                if user.failed_attempts >= 3:
                     user.is_blocked = True
-
                     log_event(f"Account Locked (Brute Force): {user.username}")
-
                 else:
-
                     log_event(f"Login Fail: {user.username}")
-
                 db.session.commit()
-
         else:
-
-            log_event(f"Unknown User Login Attempt: {request.form.get('username')}")
-
-        
+            log_event(
+                f"Unknown User Login Attempt: {request.form.get('username')}"
+            )
 
         flash("Invalid login credentials.")
 
